@@ -27,7 +27,7 @@ then
     # Sometimes the configure command fails in kaldi/src b/c make doesn't symlink openfst
     if [ ! -e openfst ]
     then
-        ln -s openfst-* openfst
+        ln -s openfst-1.6.7 openfst
     fi
     popd
     pushd kaldi/src
