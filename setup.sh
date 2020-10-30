@@ -47,9 +47,9 @@ then
     ln -s $KALDI_ROOT .
     if [ ! -f $CUDA_HOME/lib64/libcublas.so ]
     then
-        ln -s /usr/lib/x86_64-linux-gnu/libcublas.so.10 $CUDA_HOME/lib64/libcublas.so
+        sudo ln -s /usr/lib/x86_64-linux-gnu/libcublas.so.10 $CUDA_HOME/lib64/libcublas.so
     fi
-    . ./setup_cuda_env.sh /usr/local/cuda/
+    . ./setup_cuda_env.sh $CUDA_HOME
     if [ "$WHICH_PYTHON_ENV" == "venv" ]
     then
         ./setup_venv.sh $(command -v python3)
