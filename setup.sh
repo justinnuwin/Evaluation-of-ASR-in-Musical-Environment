@@ -65,10 +65,10 @@ then
     then
         CONDA_TOOLS_DIR=$(dirname ${CONDA_EXE})/..
         ./setup_anaconda.sh ${CONDA_TOOLS_DIR} espnet 3
+        conda install ipykernel --name=espnet
     elif [ "$WHICH_PYTHON_ENV" == "sys" ]
     then
         ./setup_python.sh $(command -v python3)
-        conda install ipykernel --name=espnet
     fi
     make clean
     make TH_VERSION=1.5
