@@ -27,7 +27,8 @@ then
     # Sometimes the configure command fails in kaldi/src b/c make doesn't symlink openfst
     if [ ! -e openfst ]
     then
-        ln -s openfst-1.6.7 openfst
+        openfstdir=$(find . -maxdepth 1 | grep --color=never -E "openfst-.+[0-9]$")
+        ln -s $openfstdir openfst
     fi
     popd
     pushd kaldi/src
