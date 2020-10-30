@@ -5,7 +5,7 @@ pip3 install gdown
 
 WHICH_PYTHON_ENV="anaconda"         # anaconda, venv or sys
 CUDA_HOME=/usr/local/cuda-10.2      # Must be >=Cuda-10.1 <Cuda-11.0
-BUILD_FRESH=false     # Deletes the existing repo, clones a fresh repo and builds from that
+BUILD_FRESH=true     # Deletes the existing repo, clones a fresh repo and builds from that
 BUILD_KALDI=true
 BUILD_ESPNET=true
 
@@ -24,9 +24,15 @@ then
     chmod +x extras/*.sh
     ./extras/install_openblas.sh
     sudo ./extras/install_mkl.sh
+    # Sometimes the configure command fails in kaldi/src b/c make doesn't symlink openfst
+    if [ ! -e openfst ]
+    then
+        ln -s openfst-* openfst
+    fi
     popd
     pushd kaldi/src
     ./configure --use-cuda=no    # ESPNet only uses Kaldi feature extraction which is CPU bound
+    if 
     # $ ./configure --openblas-root=../tools/OpenBLAS/install --cudatk-dir=$CUDA_HOME    # If you want to build Kaldai with CUDA and BLAS
     make -j$(nproc) clean depend
     make -j$(nproc)
@@ -53,13 +59,15 @@ then
     if [ "$WHICH_PYTHON_ENV" == "venv" ]
     then
         ./setup_venv.sh $(command -v python3)
+        ./venv/bin/pip install ipykernel
     elif [ "$WHICH_PYTHON_ENV" == "anaconda" ]
     then
         CONDA_TOOLS_DIR=$(dirname ${CONDA_EXE})/..
-        ./setup_anaconda.sh ${CONDA_TOOLS_DIR} venv 3
+        ./setup_anaconda.sh ${CONDA_TOOLS_DIR} espnet 3
     elif [ "$WHICH_PYTHON_ENV" == "sys" ]
     then
         ./setup_python.sh $(command -v python3)
+        conda install ipykernel --name=espnet
     fi
     make clean
     make TH_VERSION=1.5
@@ -67,10 +75,10 @@ then
     popd
     if [ "$WHICH_PYTHON_ENV" == "venv" ] || [ "$WHICH_PYTHON_ENV" == "anaconda" ]
     then
-        ./venv/bin/pip install ipykernel
         ipython kernel install --user --name=espnet-venv
         echo "Set up a Notebook kernel by running:"
         echo "ipython kernel install --user --name=<kernel-name>"
-        echo "Then update the kernel to use python3 in espnet/tools/venv/bin/python"
+        echo "Then update the kernel to use python3 in espnet/tools/venv/bin/python if using venv"
+        echo "Or ~/anaconda3/envs/espnet/bin/pyton if using anaconda"
     fi
 fi
