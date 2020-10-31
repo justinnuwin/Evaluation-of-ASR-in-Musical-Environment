@@ -1,2 +1,6 @@
 espnet/
 kaldi/
+
+.ipynb_checkpoints/
+*.pyc
+__pycache__/
