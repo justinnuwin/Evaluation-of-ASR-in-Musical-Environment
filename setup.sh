@@ -83,3 +83,9 @@ then
         echo "Or ~/anaconda3/envs/espnet/bin/pyton if using anaconda"
     fi
 fi
+
+
+# Project Specific Setup
+rm -rf $ESPNET_ROOT/egs/wsj/asr1/conf $ESPNET_ROOT/egs/wsj/asr1/run.sh
+ln -s $(pwd)/wsj_asr1/conf $ESPNET_ROOT/egs/wsj/asr1
+ln -s $(pwd)/wsj_asr1/run.sh $ESPNET_ROOT/egs/wsj/asr1
