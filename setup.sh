@@ -89,3 +89,19 @@ fi
 rm -rf $ESPNET_ROOT/egs/wsj/asr1/conf $ESPNET_ROOT/egs/wsj/asr1/run.sh
 ln -s $(pwd)/wsj_asr1/conf $ESPNET_ROOT/egs/wsj/asr1
 ln -s $(pwd)/wsj_asr1/run.sh $ESPNET_ROOT/egs/wsj/asr1
+
+# Pull Model
+MODEL="pretrained-transformer-model"
+MODEL_PATH=$(pwd)/$MODEL
+
+# Pretrained Models
+if [ $MODEL == "pretrained-transformer-model" ]
+then
+    $ESPNET_ROOT/utils/download_from_google_drive.sh "https://drive.google.com/open?id=1Az-4H25uwnEFa4lENc-EKiPaWXaijcJp" $MODEL_PATH tar.gz
+    ln -s $MODEL_PATH/data $ESPNET_ROOT/egs/wsj/asr1
+    ln -s $MODEL_PATH/exp $ESPNET_ROOT/egs/wsj/asr1
+elif [ $MODEL == "pretrained-rnn-model" ]
+then
+    $ESPNET_ROOT/utils/download_from_google_drive.sh "https://drive.google.com/u/0/uc?id=1Az-4H25uwnEFa4lENc-EKiPaWXaijcJp&export=download" $MODEL_PATH tar.gz
+    # Haven't pulled and tested this yet
+fi

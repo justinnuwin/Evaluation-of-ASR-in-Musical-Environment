@@ -1,5 +1,7 @@
 espnet/
 kaldi/
+pretrained-transformer-model/
+pretrained-rnn-model/
 
 .ipynb_checkpoints/
 *.pyc
