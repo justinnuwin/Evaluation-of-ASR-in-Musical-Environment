@@ -3,6 +3,8 @@ kaldi/
 pretrained-transformer-model/
 pretrained-rnn-model/
 
+*.tar.gz
+
 .ipynb_checkpoints/
 *.pyc
 __pycache__/
