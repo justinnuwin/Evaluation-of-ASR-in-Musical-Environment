@@ -65,7 +65,7 @@ then
     then
         CONDA_TOOLS_DIR=$(dirname ${CONDA_EXE})/..
         ./setup_anaconda.sh ${CONDA_TOOLS_DIR} espnet 3
-        conda install ipykernel --name=espnet
+        conda install ipykernel --name=espnet-conda-venv
     elif [ "$WHICH_PYTHON_ENV" == "sys" ]
     then
         ./setup_python.sh $(command -v python3)
@@ -84,11 +84,12 @@ then
     fi
 fi
 
+ESPNET_WSJ=$ESPNET_ROOT/egs/wsj/asr1
 
 # Project Specific Setup
-rm -rf $ESPNET_ROOT/egs/wsj/asr1/conf $ESPNET_ROOT/egs/wsj/asr1/run.sh
-ln -s $(pwd)/wsj_asr1/conf $ESPNET_ROOT/egs/wsj/asr1
-ln -s $(pwd)/wsj_asr1/run.sh $ESPNET_ROOT/egs/wsj/asr1
+rm -rf $ESPNET_WSJ/conf $ESPNET_WSJ/run.sh
+ln -s $(pwd)/wsj_asr1/conf $ESPNET_WSJ
+ln -s $(pwd)/wsj_asr1/run.sh $ESPNET_WSJ
 
 # Pull Model
 MODEL="pretrained-transformer-model"
@@ -98,8 +99,12 @@ MODEL_PATH=$(pwd)/$MODEL
 if [ $MODEL == "pretrained-transformer-model" ]
 then
     $ESPNET_ROOT/utils/download_from_google_drive.sh "https://drive.google.com/open?id=1Az-4H25uwnEFa4lENc-EKiPaWXaijcJp" $MODEL_PATH tar.gz
-    ln -s $MODEL_PATH/data $ESPNET_ROOT/egs/wsj/asr1
-    ln -s $MODEL_PATH/exp $ESPNET_ROOT/egs/wsj/asr1
+    mkdir -p $ESPNET_WSJ/data/train_si284
+    ln -s $MODEL_PATH/data/lang_1char $ESPNET_WSJ/data
+    ln -s $MODEL_PATH/data/train_si284/cmvn.ark $ESPNET_WSJ/data/train_si284
+    mkdir -p $ESPNET_WSJ/exp
+    ln -s $MODEL_PATH/exp/train_rnnlm_pytorch_lm_word65000 $ESPNET_WSJ/exp
+    ln -s $MODEL_PATH/exp/train_si284_pytorch_train_no_preprocess $ESPNET_WSJ/exp
 elif [ $MODEL == "pretrained-rnn-model" ]
 then
     $ESPNET_ROOT/utils/download_from_google_drive.sh "https://drive.google.com/u/0/uc?id=1Az-4H25uwnEFa4lENc-EKiPaWXaijcJp&export=download" $MODEL_PATH tar.gz
