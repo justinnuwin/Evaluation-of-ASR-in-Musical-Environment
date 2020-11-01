@@ -10,8 +10,11 @@ BUILD_KALDI=true
 BUILD_ESPNET=true
 SETUP_PROJECT=true
 
+# The location of this script (should be pwd)
+PROJECT_ROOT=`dirname $(realpath -s $0)`
+
 # Install Kaldi
-KALDI_ROOT=$(pwd)/kaldi
+KALDI_ROOT=$PROJECT_ROOT/kaldi
 if $BUILD_KALDI
 then
     echo "building kaldi"
@@ -42,7 +45,7 @@ fi
 
 
 # Install ESPNet
-ESPNET_ROOT=$(pwd)/espnet
+ESPNET_ROOT=$PROJECT_ROOT/espnet
 if $BUILD_ESPNET
 then
     if $BUILD_FRESH || [ ! -d $ESPNET_ROOT ]
@@ -91,14 +94,21 @@ fi
 
 ESPNET_WSJ=$ESPNET_ROOT/egs/wsj/asr1
 MODEL="pretrained-transformer-model"
-MODEL_PATH=$(pwd)/$MODEL
+MODEL_PATH=$PROJECT_ROOT/$MODEL
+
+# Add helpful aliases to go to the ESPNet/egs/wsj/asr1 folder and the top of the project
+if ! grep -q "alias GOTOespnetwsj" $HOME/.bashrc
+then
+    echo "alias GOTOespnetwsj=\"cd $ESPNET_WSJ\"" >> $HOME/.bashrc
+    echo "alias GOTOprojectroot=\"cd $PROJECT_ROOT\"" >> $HOME/.bashrc
+fi
 
 if $SETUP_PROJECT
 then
     # Project Specific Setup
     rm -rf $ESPNET_WSJ/conf $ESPNET_WSJ/run.sh
-    ln -s $(pwd)/wsj_asr1/conf $ESPNET_WSJ
-    ln -s $(pwd)/wsj_asr1/run.sh $ESPNET_WSJ
+    ln -s $PROJECT_ROOT/wsj_asr1/conf $ESPNET_WSJ
+    ln -s $PROJECT_ROOT/wsj_asr1/run.sh $ESPNET_WSJ
 
     # Pretrained Models
     if [ $MODEL == "pretrained-transformer-model" ]
@@ -110,9 +120,9 @@ then
         mkdir -p $ESPNET_WSJ/data/train_si284
         ln -s $MODEL_PATH/data/lang_1char $ESPNET_WSJ/data
         ln -s $MODEL_PATH/data/train_si284/cmvn.ark $ESPNET_WSJ/data/train_si284
-        mkdir -p $ESPNET_WSJ/exp
+        mkdir -p $ESPNET_WSJ/exp/train_si284_pytorch_train_no_preprocess
         ln -s $MODEL_PATH/exp/train_rnnlm_pytorch_lm_word65000 $ESPNET_WSJ/exp
-        ln -s $MODEL_PATH/exp/train_si284_pytorch_train_no_preprocess $ESPNET_WSJ/exp
+        ln -s $MODEL_PATH/exp/train_si284_pytorch_train_no_preprocess/results $ESPNET_WSJ/exp/train_si284_pytorch_train_no_preprocess
     elif [ $MODEL == "pretrained-rnn-model" ]
     then
         if [ ! -d $MODEL_PATH ]
