@@ -1,5 +1,11 @@
 """
-Mix utterance dataset with arbitrary noise from file. 
+Mix speech following the Kaldi file structures with noise at various levels.
+
+usage: mix_wsj_noise.py [-h] [--mix-snr snr] [--speech-level db]
+                        [--noise-level db] [--mix-level db]
+                        [--noise-timestamp time] [--noiseROI filepath]
+                        [--sph2pipe path/to/sph2pipe] [--dry-run]
+                        dataPath noiseFile
 
 Note mp3 codec is normally not installed by default:
 $ sudo apt-get install libsox-fmt-mp3
@@ -11,63 +17,65 @@ import argparse
 from math import log10
 import subprocess
 
-def dir_path(string):
-    if os.path.isdir(string):
-        return string
-    else:
-        raise NotADirectoryError(string)
 
+def build_parser():
 
-def file_path(string):
-    if os.path.isfile(string):
-        return string
-    else:
-        raise NotADirectoryError(string)
+    def dir_path(string):
+        if os.path.isdir(string):
+            return string
+        else:
+            raise NotADirectoryError(string)
 
+    def file_path(string):
+        if os.path.isfile(string):
+            return string
+        else:
+            raise NotADirectoryError(string)
 
-parser = argparse.ArgumentParser(description='Mix speech following the Kaldi \
-        file structures with noise at various levels.')
-parser.add_argument('dataPath', type=dir_path,
-        help='Path to the dataset in the data directory (i.e. data/train_si284). \
-                Required files in this directory is wav.scp and utt2dur.')
-parser.add_argument('noiseFile', type=file_path,
-        help='Path to the noise file. If there is no ROI mapping file or the \
-                specified file is not in the ROI map, then a random slice will \
-                be taken.',)
-parser.add_argument('--mix-snr', type=str, metavar='snr',
-        help='Mix speech and noise at the specified SNR. snr can be given as db \
-                or a ratio. i.e. "2:1" would mix the speech signal at 2x the \
-                power of the noise. Default to mix at 1:1 (0dB). This overrides \
-                all other level modifications.')
-parser.add_argument('--speech-level', type=str, metavar='db',
-        help='Adjust the speech mixing level. db can be a numeric value to \
-                specify absolute level to adjust the speech to or ~ can be \
-                prepended to the level to specify a relative change in level. \
-                This is superceded by --mix-snr.')
-parser.add_argument('--noise-level', type=str, metavar='db',
-        help='Same as --speech-level, but adjusts the level that the noise \
-                is mixed at. The noise level will be normalized to 0dB by \
-                default to accomadate the default 1:1 mix snr. This is also \
-                superceded by --mix-snr.')
-parser.add_argument('--mix-level', type=float, metavar='db',
-        help='The level of the mix. Output level will match speech signal\
-                by default.')
-parser.add_argument('--noise-timestamp', type=float, metavar='time',
-        help='The start timestamp to trim the noise source from to match \
-                the utterance length. This will override --noiseROI. The \
-                timestamp is in seconds from the start of the noise file.')
-parser.add_argument('--noiseROI', type=file_path, metavar='filepath',
-        help='Path to the noise.roi file. This file contains the mapping from \
-                noise filename (unique) to a list of regions of interest (start\
-                /end times). This is superceded by --noise_timestamp. \
-                (ROI is region of interest)')
-parser.add_argument('--sph2pipe', type=file_path, metavar='path/to/sph2pipe',
-        help='Path to sph2pipe if it is not on the path. This is needed to \
-                get the mix level of the final mix if --mix-level is not \
-                specified.')
-parser.add_argument('--dry-run', action='store_true',
-        help='Perform a dry run. Write augmented wav.scp file to stdout rather\
-                than dataPath/augmented_wav.scp')
+    parser = argparse.ArgumentParser(description='Mix speech following the Kaldi \
+            file structures with noise at various levels.')
+    parser.add_argument('dataPath', type=dir_path,
+            help='Path to the dataset in the data directory (i.e. data/train_si284). \
+                    Required files in this directory is wav.scp and utt2dur.')
+    parser.add_argument('noiseFile', type=file_path,
+            help='Path to the noise file. If there is no ROI mapping file or the \
+                    specified file is not in the ROI map, then a random slice will \
+                    be taken.',)
+    parser.add_argument('--mix-snr', type=str, metavar='snr',
+            help='Mix speech and noise at the specified SNR. snr can be given as db \
+                    or a ratio. i.e. "2:1" would mix the speech signal at 2x the \
+                    power of the noise. Default to mix at 1:1 (0dB). This overrides \
+                    all other level modifications.')
+    parser.add_argument('--speech-level', type=str, metavar='db',
+            help='Adjust the speech mixing level. db can be a numeric value to \
+                    specify absolute level to adjust the speech to or ~ can be \
+                    prepended to the level to specify a relative change in level. \
+                    This is superceded by --mix-snr.')
+    parser.add_argument('--noise-level', type=str, metavar='db',
+            help='Same as --speech-level, but adjusts the level that the noise \
+                    is mixed at. The noise level will be normalized to 0dB by \
+                    default to accomadate the default 1:1 mix snr. This is also \
+                    superceded by --mix-snr.')
+    parser.add_argument('--mix-level', type=float, metavar='db',
+            help='The level of the mix. Output level will match speech signal\
+                    by default. This option does not support relative levels.')
+    parser.add_argument('--noise-timestamp', type=float, metavar='time',
+            help='The start timestamp to trim the noise source from to match \
+                    the utterance length. This will override --noiseROI. The \
+                    timestamp is in seconds from the start of the noise file.')
+    parser.add_argument('--noiseROI', type=file_path, metavar='filepath',
+            help='Path to the noise.roi file. This file contains the mapping from \
+                    noise filename (unique) to a list of regions of interest (start\
+                    /end times). This is superceded by --noise_timestamp. \
+                    (ROI is region of interest)')
+    parser.add_argument('--sph2pipe', type=file_path, metavar='path/to/sph2pipe',
+            help='Path to sph2pipe if it is not on the path. This is needed to \
+                    get the mix level of the final mix if --mix-level is not \
+                    specified.')
+    parser.add_argument('--dry-run', action='store_true',
+            help='Perform a dry run. Write augmented wav.scp file to stdout rather\
+                    than dataPath/augmented_wav.scp')
+    return parser
 
 
 def parse_level_str(s):
@@ -80,7 +88,8 @@ def parse_level_str(s):
     return level, relative
 
 
-def match_noise_properties(noiseFile_path, noise_level_str=None, target_nchannels=1, target_srate=16000):
+# TODO: Make nchannels and srate dependent on the actual speech properties
+def match_noise_properties_to_speech(noiseFile_path, noise_level_str=None, target_nchannels=1, target_srate=16000):
     if noise_level_str is not None:
         noise_level, relative = parse_level_str(noise_level_str)
         matched_filename = 'lv{}-{}.wav'.format(noise_level_str, os.path.splitext(os.path.basename(noiseFile_path))[0])
@@ -117,7 +126,7 @@ def get_pk_level(scp_cmd):
     raise KeyError('Did not get Pk lev dB from sox stats on utterance\n{}'.format(res))
 
 
-def prepare_sources(mix_snr, noiseFile_path):
+def prepare_sources(noiseFile_path, mix_snr, speech_level_str, noise_level_str):
     if mix_snr is not None:
         speech_level_str = None
         noise_level_str = None
@@ -127,9 +136,9 @@ def prepare_sources(mix_snr, noiseFile_path):
             signal_power, noise_power = mix_snr.split(':')
             mix_snr = 10 * log10(signal_power / noise_power)
         # Speech is normalize in this branch so attenuate "normalized" noise to get the desired SNR
-        noiseWAV_path = match_noise_properties(noiseFile_path, str(-1 * mix_snr))
+        noiseWAV_path = match_noise_properties_to_speech(noiseFile_path, str(-1 * mix_snr))
     else:
-        noiseWAV_path = match_noise_properties(noiseFile_path, noise_level_str)
+        noiseWAV_path = match_noise_properties_to_speech(noiseFile_path, noise_level_str)
 
     if speech_level_str is not None:
         speech_level, relative = parse_level_str(speech_level_str)
@@ -146,7 +155,7 @@ def prepare_sources(mix_snr, noiseFile_path):
 def main(wavscp_path, utt2dur_path, noiseFile_path, mix_snr=None, speech_level_str=None, noise_level_str=None,
         mix_level=None, noise_timestamp=None, noiseROI_path=None, dry_run=False, sph2pipe=None):
 
-    noiseWAV_path, speech_gain_effect = prepare_sources(mix_snr, noiseFile_path)
+    noiseWAV_path, speech_gain_effect = prepare_sources(noiseFile_path, mix_snr, speech_level_str, noise_level_str)
 
     if noiseROI_path is not None:
         raise NotImplementedError('noise.roi file has not been implemented yet!')
@@ -192,6 +201,7 @@ def main(wavscp_path, utt2dur_path, noiseFile_path, mix_snr=None, speech_level_s
 
 
 if __name__ == '__main__':
+    parser = build_parser()
     args = parser.parse_args()
     
     wavscp_path = os.path.join(args.dataPath, 'wav.scp')
