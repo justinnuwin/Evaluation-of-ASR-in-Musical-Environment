@@ -65,7 +65,7 @@ train_dev=test_dev93
 train_test=test_eval92
 recog_set="test_dev93 test_eval92"
 
-if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
+if [ $(echo $stage'<='0 | bc -l) == 1 ] && [ $(echo $stop_stage'>='0 | bc -l) == 1 ]; then
     ### Task dependent. You have to make data the following preparation part by yourself.
     ### But you can utilize Kaldi recipes in most cases
     echo "stage 0: Data preparation"
@@ -73,7 +73,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     local/wsj_format_data.sh
 fi
 
-if [ $(${stage}'<='0.5 | bc -l) == 1 ] && [ $(${stop_stage}'>='0.5 | bc -l) == 1 ]; then
+if [ $(echo $stage'<='0.5 | bc -l) == 1 ] && [ $(echo $stop_stage'>='0.5 | bc -l) == 1 ]; then
     ### Stage 0.5 Data augmentatin: Mix utterace with noise source.
     echo "stage 0.5: Data augmentation"
 
@@ -81,7 +81,6 @@ if [ $(${stage}'<='0.5 | bc -l) == 1 ] && [ $(${stop_stage}'>='0.5 | bc -l) == 1
     # TODO
     
     for rtask in ${recog_set}; do
-        split --numeric-suffixes -n l/$NJOB data/$rtask/wav.scp data/$rtask/wav.scp.
         python3 local/mix_wsj_noise.py data/$rtask $noise_file \
             --sph2pipe $KALDI_ROOT/tools/sph2pipe_v2.5/sph2pipe \
             --mix-snr $mix_snr \
@@ -97,7 +96,7 @@ fi
 
 feat_tr_dir=${dumpdir}/${train_set}/delta${do_delta}; mkdir -p ${feat_tr_dir}
 feat_dt_dir=${dumpdir}/${train_dev}/delta${do_delta}; mkdir -p ${feat_dt_dir}
-if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+if [ $(echo $stage'<='1 | bc -l) == 1 ] && [ $(echo $stop_stage'>='1 | bc -l) == 1 ]; then
     ### Task dependent. You have to design training and dev sets by yourself.
     ### But you can utilize Kaldi recipes in most cases
     echo "stage 1: Feature Generation"
@@ -139,7 +138,7 @@ dict=data/lang_1char/${train_set}_units.txt
 nlsyms=data/lang_1char/non_lang_syms.txt
 
 echo "dictionary: ${dict}"
-if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
+if [ $(echo $stage'<='2 | bc -l) == 1 ] && [ $(echo $stop_stage'>='2 | bc -l) == 1 ]; then
     ### Task dependent. You have to check non-linguistic symbols used in the corpus.
     echo "stage 2: Dictionary and Json Data Preparation"
     mkdir -p data/lang_1char/
@@ -189,7 +188,7 @@ lmexpname=train_rnnlm_${backend}_${lmtag}
 lmexpdir=exp/${lmexpname}
 mkdir -p ${lmexpdir}
 
-if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
+if [ $(echo stage'<='3 | bc -l) == 1 ] && [ $(echo $stop_stage'>='3 | bc -l) == 1 ]; then
     echo "stage 3: LM Preparation"
 
     if [ ${use_wordlm} = true ]; then
@@ -246,7 +245,7 @@ fi
 expdir=exp/${expname}
 mkdir -p ${expdir}
 
-if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
+if [ $(echo stage'<='4 | bc -l) == 1 ] && [ $(echo $stop_stage'>='4 | bc -l) == 1 ]; then
     echo "stage 4: Network Training"
 
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/train.log \
@@ -268,7 +267,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         --valid-json ${feat_dt_dir}/data.json
 fi
 
-if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
+if [ $(echo stage'<='5 | bc -l) == 1 ] && [ $(echo $stop_stage'>='5 | bc -l) == 1 ]; then
     echo "stage 5: Decoding"
     nj=32
 # Justin -- Using pretrained model, don't average model checkpoints
