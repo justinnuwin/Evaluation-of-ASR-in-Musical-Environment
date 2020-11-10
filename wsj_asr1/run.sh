@@ -68,6 +68,16 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     local/wsj_format_data.sh
 fi
 
+if [ $(${stage}'<='0.5 | bc -l) == 1 ] && [ $(${stop_stage}'>='0.5 | bc -l) == 1 ]; then
+    ### Mix utterace with noise source. 
+    echo "stage 0.5: Data augmentation"
+
+    # Get utt2dur so we know how long to slice the noise source
+    # TODO:
+
+    local/mix_wsj_noise.py # TODO: Fill in these arguments
+fi
+
 feat_tr_dir=${dumpdir}/${train_set}/delta${do_delta}; mkdir -p ${feat_tr_dir}
 feat_dt_dir=${dumpdir}/${train_dev}/delta${do_delta}; mkdir -p ${feat_dt_dir}
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
