@@ -109,6 +109,7 @@ then
     rm -rf $ESPNET_WSJ/conf $ESPNET_WSJ/run.sh
     ln -s $PROJECT_ROOT/wsj_asr1/conf $ESPNET_WSJ
     ln -s $PROJECT_ROOT/wsj_asr1/run.sh $ESPNET_WSJ
+    ln -s $PROJECT_ROOT/wsj_asr1/local/mix_wsj_noise $ESPNET_WSJ/local
 
     # Pretrained Models
     if [ $MODEL == "pretrained-transformer-model" ]
