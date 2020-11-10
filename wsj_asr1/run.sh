@@ -102,30 +102,32 @@ if [ $(echo $stage'<='1 | bc -l) == 1 ] && [ $(echo $stop_stage'>='1 | bc -l) ==
     echo "stage 1: Feature Generation"
     fbankdir=fbank
     # Generate the fbank features; by default 80-dimensional fbanks with pitch on each frame
-    for x in train_si284 test_dev93 test_eval92; do
+    # XXX: When decoding dont need to do train_si284
+    #Justin for x in train_si284 test_dev93 test_eval92; do
+    for x in test_dev93 test_eval92; do
         steps/make_fbank_pitch.sh --cmd "$train_cmd" --nj 10 --write_utt2num_frames true \
             data/${x} exp/make_fbank/${x} ${fbankdir}
         utils/fix_data_dir.sh data/${x}
     done
 
     # compute global CMVN
-    compute-cmvn-stats scp:data/${train_set}/feats.scp data/${train_set}/cmvn.ark
+    #Justin compute-cmvn-stats scp:data/${train_set}/feats.scp data/${train_set}/cmvn.ark
 
     # dump features for training
-    if [[ $(hostname -f) == *.clsp.jhu.edu ]] && [ ! -d ${feat_tr_dir}/storage ]; then
-    utils/create_split_dir.pl \
-        /export/b{10,11,12,13}/${USER}/espnet-data/egs/wsj/asr1/dump/${train_set}/delta${do_delta}/storage \
-        ${feat_tr_dir}/storage
-    fi
-    if [[ $(hostname -f) == *.clsp.jhu.edu ]] && [ ! -d ${feat_dt_dir}/storage ]; then
-    utils/create_split_dir.pl \
-        /export/b{10,11,12,13}/${USER}/espnet-data/egs/wsj/asr1/dump/${train_dev}/delta${do_delta}/storage \
-        ${feat_dt_dir}/storage
-    fi
-    dump.sh --cmd "$train_cmd" --nj 32 --do_delta ${do_delta} \
-        data/${train_set}/feats.scp data/${train_set}/cmvn.ark exp/dump_feats/train ${feat_tr_dir}
-    dump.sh --cmd "$train_cmd" --nj 4 --do_delta ${do_delta} \
-        data/${train_dev}/feats.scp data/${train_set}/cmvn.ark exp/dump_feats/dev ${feat_dt_dir}
+#Justin   if [[ $(hostname -f) == *.clsp.jhu.edu ]] && [ ! -d ${feat_tr_dir}/storage ]; then
+#Justin   utils/create_split_dir.pl \
+#Justin       /export/b{10,11,12,13}/${USER}/espnet-data/egs/wsj/asr1/dump/${train_set}/delta${do_delta}/storage \
+#Justin       ${feat_tr_dir}/storage
+#Justin   fi
+#Justin   if [[ $(hostname -f) == *.clsp.jhu.edu ]] && [ ! -d ${feat_dt_dir}/storage ]; then
+#Justin   utils/create_split_dir.pl \
+#Justin       /export/b{10,11,12,13}/${USER}/espnet-data/egs/wsj/asr1/dump/${train_dev}/delta${do_delta}/storage \
+#Justin       ${feat_dt_dir}/storage
+#Justin   fi
+    #Justin dump.sh --cmd "$train_cmd" --nj 32 --do_delta ${do_delta} \
+    #Justin     data/${train_set}/feats.scp data/${train_set}/cmvn.ark exp/dump_feats/train ${feat_tr_dir}
+    #Justin dump.sh --cmd "$train_cmd" --nj 4 --do_delta ${do_delta} \
+    #Justin     data/${train_dev}/feats.scp data/${train_set}/cmvn.ark exp/dump_feats/dev ${feat_dt_dir}
     for rtask in ${recog_set}; do
         feat_recog_dir=${dumpdir}/${rtask}/delta${do_delta}; mkdir -p ${feat_recog_dir}
         dump.sh --cmd "$train_cmd" --nj 4 --do_delta ${do_delta} \
@@ -188,7 +190,7 @@ lmexpname=train_rnnlm_${backend}_${lmtag}
 lmexpdir=exp/${lmexpname}
 mkdir -p ${lmexpdir}
 
-if [ $(echo stage'<='3 | bc -l) == 1 ] && [ $(echo $stop_stage'>='3 | bc -l) == 1 ]; then
+if [ $(echo $stage'<='3 | bc -l) == 1 ] && [ $(echo $stop_stage'>='3 | bc -l) == 1 ]; then
     echo "stage 3: LM Preparation"
 
     if [ ${use_wordlm} = true ]; then
@@ -245,7 +247,7 @@ fi
 expdir=exp/${expname}
 mkdir -p ${expdir}
 
-if [ $(echo stage'<='4 | bc -l) == 1 ] && [ $(echo $stop_stage'>='4 | bc -l) == 1 ]; then
+if [ $(echo $stage'<='4 | bc -l) == 1 ] && [ $(echo $stop_stage'>='4 | bc -l) == 1 ]; then
     echo "stage 4: Network Training"
 
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/train.log \
@@ -267,7 +269,7 @@ if [ $(echo stage'<='4 | bc -l) == 1 ] && [ $(echo $stop_stage'>='4 | bc -l) == 
         --valid-json ${feat_dt_dir}/data.json
 fi
 
-if [ $(echo stage'<='5 | bc -l) == 1 ] && [ $(echo $stop_stage'>='5 | bc -l) == 1 ]; then
+if [ $(echo $stage'<='5 | bc -l) == 1 ] && [ $(echo $stop_stage'>='5 | bc -l) == 1 ]; then
     echo "stage 5: Decoding"
     nj=32
 # Justin -- Using pretrained model, don't average model checkpoints

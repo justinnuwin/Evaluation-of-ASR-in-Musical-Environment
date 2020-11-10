@@ -18,6 +18,10 @@ from math import log10
 import subprocess
 
 
+BITDEPTH=16
+ENCODING='signed-integer'
+
+
 def build_parser():
 
     def dir_path(string):
@@ -100,7 +104,7 @@ def parse_level_str(s):
 
 # TODO: Make nchannels and srate dependent on the actual speech properties
 def match_noise_properties_to_speech(noiseFile_path, noise_level_str=None, target_nchannels=1, target_srate=16000,
-        target_bitdepth=16, target_encoding='signed-integer'):
+        target_bitdepth=BITDEPTH, target_encoding=ENCODING):
     if noise_level_str is not None:
         noise_level, relative = parse_level_str(noise_level_str)
         matched_filename = 'lv{}-{}.wav'.format(noise_level_str, os.path.splitext(os.path.basename(noiseFile_path))[0])
@@ -210,9 +214,9 @@ def main(wavscp_path, utt2dur_path, noiseFile_path, mix_snr=None, speech_level_s
         # -p is --sox-pipe, for some reason it won't take that version of the argument
         augmented_command = 'sox -t wav - -p {speechEffect} | ' \
                             'sox --combine mix -p "|sox {noisePath} -p trim {start} {duration}" ' \
-                            '-t wav - gain -n {mixLevel} |'.format(
+                            '-t wav -b {bit} -e {enc} - gain -n {mixLevel} |'.format(
                 speechEffect=speech_gain_effect, noisePath=noiseWAV_path, start=noise_timestamp,
-                duration=duration, mixLevel=this_mix_level)
+                duration=duration, bit=BITDEPTH, enc=ENCODING, mixLevel=this_mix_level)
 
         augmented_wavscp_line = '{} {}\n'.format(wavscp_line, augmented_command)
         new_wavscp_f.write(augmented_wavscp_line)
