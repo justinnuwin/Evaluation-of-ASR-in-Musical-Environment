@@ -1,4 +1,8 @@
 PROJECT_ROOT=$(pwd)
+MIX_SNR=9
+MIX_LEVEL=0
+NOISE_START=15
+OUTPUT_DIR=results-mix-snr${MIX_SNR}-lv${MIX_LEVEL}-start${NOISE_START}
 DRY_RUN=false
 
 pushd espnet/egs/wsj/asr1
@@ -15,24 +19,25 @@ do
     then
         echo "./run.sh --stage 0.5 --stop_stage 1 --ngpu 0 \
             --noise_file \"$song_dir/mixture.wav\" \
-            --mix_snr 3 \
-            --noise_timestamp 15.0 "
+            --mix_snr $MIX_SNR \
+            --mix_level $MIX_LEVEL \
+            --noise_timestamp $NOISE_START"
         echo "./run.sh --stage 5"
         pushd exp/train_si284_pytorch_train_no_preprocess
-        echo "mkdir $song_dir/mix-snr3_timestamp15"
-        echo "mv decode_* $song_dir/mix-snr3_timestamp15"
+        echo "mkdir $song_dir/$OUTPUT_DIR"
+        echo "mv decode_* $song_dir/$OUTPUT_DIR"
         popd
     else
         ./run.sh --stage 0.5 --stop_stage 1 --ngpu 0 \
             --noise_file "$song_dir/mixture.wav" \
-            --mix_snr 3 \
-            --mix_level 0 \
-            --noise_timestamp 15.0 
+            --mix_snr $MIX_SNR \
+            --mix_level $MIX_LEVEL \
+            --noise_timestamp $NOISE_START
         ./run.sh --stage 5
 
         pushd exp/train_si284_pytorch_train_no_preprocess
-        mkdir $song_dir/mix-snr3_timestamp15
-        mv decode_* $song_dir/mix-snr3_timestamp15
+        mkdir $song_dir/$OUTPUT_DIR
+        mv decode_* $song_dir/$OUTPUT_DIR
         popd
 
         $PROJECT_ROOT/reset_wavscp.sh
