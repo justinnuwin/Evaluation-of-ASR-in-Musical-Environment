@@ -3,6 +3,14 @@ DRY_RUN=false
 
 pushd espnet/egs/wsj/asr1
 
+pushd data/test_dev93
+cp wav.scp wav.scp.orig
+popd
+
+pushd data/test_eval92
+cp wav.scp wav.scp.orig
+popd
+
 for song_dir in $PROJECT_ROOT/Mixtures/*
 do
 
@@ -28,6 +36,14 @@ do
         pushd exp/train_si284_pytorch_train_no_preprocess
         mkdir $song_dir/mix-snr3_timestamp15
         mv decode_* $song_dir/mix-snr3_timestamp15
+        popd
+
+        pushd data/test_dev93
+        cp wav.scp.orig wav.scp
+        popd
+
+        pushd data/test_eval92
+        cp wav.scp.orig wav.scp
         popd
     fi
 
