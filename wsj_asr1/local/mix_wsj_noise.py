@@ -1,9 +1,10 @@
-# Note mp3 codec is not installed by default:
-# $ sudo apt-get install libsox-fmt-mp3
 """
+Mix utterance dataset with arbitrary noise from file. 
+
+Note mp3 codec is normally not installed by default:
+$ sudo apt-get install libsox-fmt-mp3
 SIGGEP dataset ROI begins at 15 seconds for everything
 """
-
 import os
 import sys
 import argparse
@@ -29,7 +30,7 @@ parser = argparse.ArgumentParser(description='Mix speech following the Kaldi \
 parser.add_argument('dataPath', type=dir_path,
         help='Path to the dataset in the data directory (i.e. data/train_si284). \
                 Required files in this directory is wav.scp and utt2dur.')
-parser.add_argument('noiseWAV', type=file_path,
+parser.add_argument('noiseFile', type=file_path,
         help='Path to the noise file. If there is no ROI mapping file or the \
                 specified file is not in the ROI map, then a random slice will \
                 be taken.',)
@@ -79,23 +80,23 @@ def parse_level_str(s):
     return level, relative
 
 
-def match_noise_properties(noiseWAV_path, noise_level_str=None, target_nchannels=1, target_srate=16000):
+def match_noise_properties(noiseFile_path, noise_level_str=None, target_nchannels=1, target_srate=16000):
     if noise_level_str is not None:
         noise_level, relative = parse_level_str(noise_level_str)
-        matched_filename = 'lv{}-{}.wav'.format(noise_level_str, os.path.splitext(os.path.basename(noiseWAV_path))[0])
-        matched_path = os.path.join(os.path.dirname(noiseWAV_path), matched_filename)
+        matched_filename = 'lv{}-{}.wav'.format(noise_level_str, os.path.splitext(os.path.basename(noiseFile_path))[0])
+        matched_path = os.path.join(os.path.dirname(noiseFile_path), matched_filename)
 
         if relative:
             gain_effect = 'gain {}'.format(noise_level)
         else:
             gain_effect = 'gain -n {}'.format(noise_level)     # Normalizes peak to noise_level dB FSD (Full Scale Deflection)
     else:
-        matched_filename = '{}.wav'.format(os.path.splitext(os.path.basename(noiseWAV_path))[0])
-        matched_path = os.path.join(os.path.dirname(noiseWAV_path), matched_filename)
+        matched_filename = '{}.wav'.format(os.path.splitext(os.path.basename(noiseFile_path))[0])
+        matched_path = os.path.join(os.path.dirname(noiseFile_path), matched_filename)
         gain_effect = 'gain -n'     # Normalize to 0db for 1:1 mixing.
 
     command = 'sox -V2 {infile} --type wav --channels={nchannels} --rate={srate} {outfile} {effect}'.format(
-        infile=noiseWAV_path, nchannels=target_nchannels, srate=target_srate, outfile=matched_path, effect=gain_effect)
+        infile=noiseFile_path, nchannels=target_nchannels, srate=target_srate, outfile=matched_path, effect=gain_effect)
     return_code = subprocess.call(command, shell=True)
     if return_code != 0:
         raise Exception('code {} raised by: {}'.format(return_code, command))
@@ -104,18 +105,19 @@ def match_noise_properties(noiseWAV_path, noise_level_str=None, target_nchannels
 
 
 def get_pk_level(scp_cmd):
-    res = subprocess.run('sox "|{}" --null stats'.format(scp_cmd), shell=True, stderr=subprocess.PIPE)   # For some reason, sox outputs stats on stderr
+    # For some reason, sox outputs stats on stderr
+    res = subprocess.run('sox "|{}" --null stats'.format(scp_cmd), shell=True, stderr=subprocess.PIPE)
     if res.returncode != 0:
-        raise Exception('Error getting peak level from utterance since desired mix level was not specified.\n{}'.format(res.stderr.decode('utf-8')))
+        raise Exception('Error getting peak level from utterance since desired mix level was not specified.\n{}'.format(
+            res.stderr.decode('utf-8')))
     utterance_stats = res.stderr.decode('utf-8').strip().split('\n')
     for stat in utterance_stats:
         if 'Pk lev dB' in stat:
             return float(stat.replace('Pk lev dB', '').strip())
-    raise KeyError('Did not get Pk level dB from sox stats on utterance\n{}'.format(res))
+    raise KeyError('Did not get Pk lev dB from sox stats on utterance\n{}'.format(res))
 
 
-def main(wavscp_path, utt2dur_path, noiseWAV_path, mix_snr=None, speech_level_str=None, noise_level_str=None,
-        mix_level=None, noise_timestamp=None, noiseROI_path=None, dry_run=False, sph2pipe=None):
+def prepare_sources(mix_snr, noiseFile_path):
     if mix_snr is not None:
         speech_level_str = None
         noise_level_str = None
@@ -124,18 +126,27 @@ def main(wavscp_path, utt2dur_path, noiseWAV_path, mix_snr=None, speech_level_st
         except ValueError:
             signal_power, noise_power = mix_snr.split(':')
             mix_snr = 10 * log10(signal_power / noise_power)
-        noiseWAV_path = match_noise_properties(noiseWAV_path, str(-1 * mix_snr))     # Speech will be normalized so attenuate noise
+        # Speech is normalize in this branch so attenuate "normalized" noise to get the desired SNR
+        noiseWAV_path = match_noise_properties(noiseFile_path, str(-1 * mix_snr))
     else:
-        noiseWAV_path = match_noise_properties(noiseWAV_path, noise_level_str)
+        noiseWAV_path = match_noise_properties(noiseFile_path, noise_level_str)
 
     if speech_level_str is not None:
         speech_level, relative = parse_level_str(speech_level_str)
         if relative:
-            gain_effect = 'gain {}'.format(speech_level)
+            speech_gain_effect = 'gain {}'.format(speech_level)
         else:
-            gain_effect = 'gain -n {}'.format(speech_level)
+            speech_gain_effect = 'gain -n {}'.format(speech_level)
     else:
-        gain_effect = 'gain -n'
+        speech_gain_effect = 'gain -n'
+
+    return noiseWAV_path, speech_gain_effect
+
+
+def main(wavscp_path, utt2dur_path, noiseFile_path, mix_snr=None, speech_level_str=None, noise_level_str=None,
+        mix_level=None, noise_timestamp=None, noiseROI_path=None, dry_run=False, sph2pipe=None):
+
+    noiseWAV_path, speech_gain_effect = prepare_sources(mix_snr, noiseFile_path)
 
     if noiseROI_path is not None:
         raise NotImplementedError('noise.roi file has not been implemented yet!')
@@ -166,13 +177,14 @@ def main(wavscp_path, utt2dur_path, noiseWAV_path, mix_snr=None, speech_level_st
             this_mix_level = mix_level
 
         # Mix both inputs at 1/n balance factor
-        augmented_command = 'sox -t wav - -p {speechEffect} | sox --combine mix -p "|sox {noisePath} -p trim {start} {duration}" -t wav - gain -n {mixLevel} |'.format(
-            speechEffect=gain_effect, noisePath=noiseWAV_path, start=noise_timestamp, duration=duration,
-            mixLevel=this_mix_level)
+        augmented_command = 'sox -t wav - -p {speechEffect} | ' \
+                            'sox --combine mix -p "|sox {noisePath} -p trim {start} {duration}" ' \
+                            '-t wav - gain -n {mixLevel} |'.format(
+                speechEffect=speech_gain_effect, noisePath=noiseWAV_path, start=noise_timestamp,
+                duration=duration, mixLevel=this_mix_level)
 
         augmented_wavscp_line = '{} {}\n'.format(wavscp_line, augmented_command)
         new_wavscp_f.write(augmented_wavscp_line)
-
         
     new_wavscp_f.close()
     wavscp_f.close()
@@ -189,7 +201,7 @@ if __name__ == '__main__':
     if not os.path.isfile(utt2dur_path):
         raise FileNotFoundError('Could not find utt2dur in {}'.format(args.dataPath))
 
-    main(wavscp_path, utt2dur_path, args.noiseWAV, mix_snr=args.mix_snr,
+    main(wavscp_path, utt2dur_path, args.noiseFile, mix_snr=args.mix_snr,
             speech_level_str=args.speech_level, noise_level_str=args.noise_level,
             mix_level=args.mix_level, noise_timestamp=args.noise_timestamp,
             noiseROI_path=args.noiseROI, dry_run=args.dry_run, sph2pipe=args.sph2pipe)
