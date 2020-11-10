@@ -109,7 +109,7 @@ then
     rm -rf $ESPNET_WSJ/conf $ESPNET_WSJ/run.sh
     ln -s $PROJECT_ROOT/wsj_asr1/conf $ESPNET_WSJ
     ln -s $PROJECT_ROOT/wsj_asr1/run.sh $ESPNET_WSJ
-    ln -s $PROJECT_ROOT/wsj_asr1/local/mix_wsj_noise $ESPNET_WSJ/local
+    ln -s $PROJECT_ROOT/wsj_asr1/local/mix_wsj_noise/mix_wsj_noise.py $ESPNET_WSJ/local
 
     # Pretrained Models
     if [ $MODEL == "pretrained-transformer-model" ]
@@ -136,3 +136,6 @@ then
         echo "We have not trained this model to completion yet"
     fi
 fi
+
+
+# ./espnet/utils/download_from_google_drive.sh https://drive.google.com/uc?id=1YApb8klDufKHZfvGy95kQb_rW5bfIK2p&export=download     # Download music mixture

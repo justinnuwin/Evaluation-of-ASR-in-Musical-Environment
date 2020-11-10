@@ -47,6 +47,11 @@ wsj1=/export/corpora5/LDC/LDC94S13B
 # exp tag
 tag="" # tag for managing experiments.
 
+# Stage 0.5 Data Augmentation
+noise_file=$MAIN_ROOT/../wsj_asr1/local/mix_wsj_noise/test/Kalimba.mp3
+mix_snr=3
+noise_timestamp=15.0
+
 . utils/parse_options.sh || exit 1;
 
 # Set bash to 'debug' mode, it will exit on :
@@ -69,13 +74,25 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
 fi
 
 if [ $(${stage}'<='0.5 | bc -l) == 1 ] && [ $(${stop_stage}'>='0.5 | bc -l) == 1 ]; then
-    ### Mix utterace with noise source. 
+    ### Stage 0.5 Data augmentatin: Mix utterace with noise source.
     echo "stage 0.5: Data augmentation"
 
     # Get utt2dur so we know how long to slice the noise source
-    # TODO:
+    # TODO
+    
+    for rtask in ${recog_set}; do
+        split --numeric-suffixes -n l/$NJOB data/$rtask/wav.scp data/$rtask/wav.scp.
+        python3 local/mix_wsj_noise.py data/$rtask $noise_file \
+            --sph2pipe $KALDI_ROOT/tools/sph2pipe_v2.5/sph2pipe \
+            --mix-snr $mix_snr \
+            --noise-timestamp $noise_timestamp
+        pushd data/$rtask
+        mkdir -p .backup
+        mv wav.scp .backup/wav.scp.stg05-$(date +%y-%m-%d_%T)
+        mv augmented_wav.scp wav.scp
+        popd
+    done
 
-    local/mix_wsj_noise.py # TODO: Fill in these arguments
 fi
 
 feat_tr_dir=${dumpdir}/${train_set}/delta${do_delta}; mkdir -p ${feat_tr_dir}
