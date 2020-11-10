@@ -3,20 +3,12 @@ DRY_RUN=false
 
 pushd espnet/egs/wsj/asr1
 
-pushd data/test_dev93
-cp wav.scp.vanilla wav.scp
-cp wav.scp wav.scp.orig
-popd
-
-pushd data/test_eval92
-cp wav.scp.vanilla wav.scp
-cp wav.scp wav.scp.orig
-popd
+./reset_wavscp.sh
 
 for song_dir in $PROJECT_ROOT/Mixtures/*
 do
 
-    echo "\n\n====================================================================="
+    echo -e "\n\n================================================================="
     echo "$(date)            $song_dir"
 
     if $DRY_RUN
@@ -34,6 +26,7 @@ do
         ./run.sh --stage 0.5 --stop_stage 1 --ngpu 0 \
             --noise_file "$song_dir/mixture.wav" \
             --mix_snr 3 \
+            --mix_level 0 \
             --noise_timestamp 15.0 
         ./run.sh --stage 5
 
@@ -42,13 +35,7 @@ do
         mv decode_* $song_dir/mix-snr3_timestamp15
         popd
 
-        pushd data/test_dev93
-        cp wav.scp.orig wav.scp
-        popd
-
-        pushd data/test_eval92
-        cp wav.scp.orig wav.scp
-        popd
+        ./reset_wavscp.sh
     fi
 
 done

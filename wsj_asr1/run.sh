@@ -51,6 +51,7 @@ tag="" # tag for managing experiments.
 noise_file=$MAIN_ROOT/../wsj_asr1/local/mix_wsj_noise/test/Kalimba.mp3
 mix_snr=3
 noise_timestamp=15.0
+mix_level=0
 
 . utils/parse_options.sh || exit 1;
 
@@ -84,6 +85,7 @@ if [ $(echo $stage'<='0.5 | bc -l) == 1 ] && [ $(echo $stop_stage'>='0.5 | bc -l
         python3 local/mix_wsj_noise.py data/$rtask $noise_file \
             --sph2pipe $KALDI_ROOT/tools/sph2pipe_v2.5/sph2pipe \
             --mix-snr $mix_snr \
+            --mix-level $mix_level \
             --noise-timestamp $noise_timestamp
         pushd data/$rtask
         mkdir -p .backup
