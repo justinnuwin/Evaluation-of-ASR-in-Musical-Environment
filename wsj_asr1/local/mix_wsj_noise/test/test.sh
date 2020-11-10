@@ -9,7 +9,7 @@ for i in $(seq 0 `expr $NJOB - 1`)
 do
     python3 ../mix_wsj_noise.py data/ Kalimba.mp3 \
         --sph2pipe ../../../../kaldi/tools/sph2pipe_v2.5/sph2pipe \
-        --noise-level -10 \
+        --mix-snr 3 \
         --noise-timestamp 23.4 \
         --job $i &
 done
