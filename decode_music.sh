@@ -3,7 +3,7 @@ DRY_RUN=false
 
 pushd espnet/egs/wsj/asr1
 
-./reset_wavscp.sh
+$PROJECT_ROOT/reset_wavscp.sh
 
 for song_dir in $PROJECT_ROOT/Mixtures/*
 do
@@ -35,7 +35,7 @@ do
         mv decode_* $song_dir/mix-snr3_timestamp15
         popd
 
-        ./reset_wavscp.sh
+        $PROJECT_ROOT/reset_wavscp.sh
     fi
 
 done
