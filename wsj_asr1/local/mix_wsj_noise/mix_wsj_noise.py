@@ -99,7 +99,8 @@ def parse_level_str(s):
 
 
 # TODO: Make nchannels and srate dependent on the actual speech properties
-def match_noise_properties_to_speech(noiseFile_path, noise_level_str=None, target_nchannels=1, target_srate=16000):
+def match_noise_properties_to_speech(noiseFile_path, noise_level_str=None, target_nchannels=1, target_srate=16000,
+        target_bitdepth=16, target_encoding='signed-integer'):
     if noise_level_str is not None:
         noise_level, relative = parse_level_str(noise_level_str)
         matched_filename = 'lv{}-{}.wav'.format(noise_level_str, os.path.splitext(os.path.basename(noiseFile_path))[0])
@@ -114,8 +115,9 @@ def match_noise_properties_to_speech(noiseFile_path, noise_level_str=None, targe
         matched_path = os.path.join(os.path.dirname(noiseFile_path), matched_filename)
         gain_effect = 'gain -n'     # Normalize to 0db for 1:1 mixing.
 
-    command = 'sox -V2 {infile} --type wav --channels={nchannels} --rate={srate} {outfile} {effect}'.format(
-        infile=noiseFile_path, nchannels=target_nchannels, srate=target_srate, outfile=matched_path, effect=gain_effect)
+    command = 'sox -V2 {infile} --type wav --channels={nchannels} --rate={srate} --bits {bits} --encoding {encoding} {outfile} {effect}'.format(
+        infile=noiseFile_path, nchannels=target_nchannels, srate=target_srate, bits=target_bitdepth, encoding=target_encoding,
+        outfile=matched_path, effect=gain_effect)
     return_code = subprocess.call(command, shell=True)
     if return_code != 0:
         raise Exception('code {} raised by: {}'.format(return_code, command))
@@ -135,8 +137,8 @@ def get_peak_level(scp_cmd):
                 '\t\t--sph2pipe /path/possibly/kaldi/tools/sph2pipe\n\n' \
                 'Original Error:\n{}'.format(output))
     elif res.returncode != 0:
-        raise Exception('Error getting peak level from utterance since desired mix level was not specified.\n{}'.format(
-            output))
+        raise Exception('Error getting peak level from utterance since desired mix level was not specified.\n' \
+                '\ncmd:\n{}\n\nerror:\n{}'.format(cmd, output))
     utterance_stats = output.strip().split('\n')
     for stat in utterance_stats:
         if 'Pk lev dB' in stat:
