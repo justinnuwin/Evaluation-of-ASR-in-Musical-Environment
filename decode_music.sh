@@ -1,5 +1,5 @@
 PROJECT_ROOT=$(pwd)
-MIX_SNR=9
+MIX_SNR=12
 MIX_LEVEL=0
 NOISE_START=15
 OUTPUT_DIR=results-mix-snr${MIX_SNR}-lv${MIX_LEVEL}-start${NOISE_START}
@@ -22,7 +22,7 @@ do
             --mix_snr $MIX_SNR \
             --mix_level $MIX_LEVEL \
             --noise_timestamp $NOISE_START"
-        echo "./run.sh --stage 5"
+        echo "./run.sh --stage 5 --ngpu 0"
         pushd exp/train_si284_pytorch_train_no_preprocess
         echo "mkdir $song_dir/$OUTPUT_DIR"
         echo "mv decode_* $song_dir/$OUTPUT_DIR"
@@ -33,7 +33,7 @@ do
             --mix_snr $MIX_SNR \
             --mix_level $MIX_LEVEL \
             --noise_timestamp $NOISE_START
-        ./run.sh --stage 5
+        ./run.sh --stage 5 --ngpu 0
 
         pushd exp/train_si284_pytorch_train_no_preprocess
         mkdir $song_dir/$OUTPUT_DIR
