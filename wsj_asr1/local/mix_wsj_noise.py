@@ -57,10 +57,15 @@ parser.add_argument('--noise-level', type=str, metavar='db',
 parser.add_argument('--mix_level', type=float, metavar='db',
         help='The level of the mix. Output level will match speech signal\
                 by default.')
+parser.add_argument('--noise-timestamp', type=float, metavar='time',
+        help='The start timestamp to trim the noise source from to match \
+                the utterance length. This will override --noiseROI. The \
+                timestamp is in seconds from the start of the noise file.')
 parser.add_argument('--noiseROI', type=file_path, metavar='filepath',
         help='Path to the noise.roi file. This file contains the mapping from \
                 noise filename (unique) to a list of regions of interest (start\
-                /end times). (ROI is region of interest)')
+                /end times). This is superceded by --noise_timestamp. \
+                (ROI is region of interest)')
 
 
 """
@@ -110,8 +115,18 @@ def get_pk_level(scp_cmd):
             return float(stat.replace('Pk lev dB', '').strip())
 
 
-def main(wavscp_path, utt2dur_path, noiseWAV_path, mix_snr=None, speech_level_str=None, noise_level_str=None, mix_level=None, noiseROI_path=None):
-    noiseWAV_path = match_noise_properties(noiseWAV_path, noise_level_str)
+def main(wavscp_path, utt2dur_path, noiseWAV_path, mix_snr=None, speech_level_str=None, noise_level_str=None, mix_level=None, noise_timestamp=None, noiseROI_path=None):
+    if mix_snr is not None:
+        speech_level_str = None
+        noise_level_str = None
+        try:
+            mix_snr = float(mix_snr)
+        except ValueError:
+            signal_power, noise_power = mix_snr.split(':')
+            mix_snr = 10 * log10(signal_power / noise_power)
+        noiseWAV_path = match_noise_properties(noiseWAV_path, str(-1 * mix_snr))     # Speech will be normalized so attenuate noise
+    else:
+        noiseWAV_path = match_noise_properties(noiseWAV_path, noise_level_str)
 
     if speech_level_str is not None:
         speech_level, relative = parse_level_str(speech_level_str)
@@ -122,21 +137,20 @@ def main(wavscp_path, utt2dur_path, noiseWAV_path, mix_snr=None, speech_level_st
     else:
         gain_effect = 'gain -n'
 
-    if mix_snr is not None:
-        try:
-            mix_snr = float(mix_snr)
-        except ValueError:
-            signal_power, noise_power = mix_snr.split(':')
-            mix_snr = 10 * log10(signal_power / noise_power)
-    else:
-        mix_snr = 0.
-
+    if noiseROI_path is not None:
+        raise NotImplementedError('noise.roi file has not been implemented yet!')
+    if noise_timestamp is None:
+        noise_timestamp = 0
 
     wavscp_f = open(wavscp_path, 'r')
     utt2dur_f = open(utt2dur_path, 'r')
 
+    new_wavscp_f = open('new_wav.scp', 'w')
+
     for i, wavscp_line in enumerate(wavscp_f):
         utt2dur_line = next(utt2dur_f).strip()
+        utt_id, duration = utt2dur_line.split()
+
         wavscp_line = wavscp_line.strip()
         scp_cmd = ' '.join(wavscp_line.split(' ')[1:-1])    # Remove utterance id and ending pipe symbol
         scp_cmd = '/mnt/Projects/18-781/18-781_Semester_Project/kaldi/tools/sph2pipe_v2.5/' + scp_cmd
@@ -144,20 +158,20 @@ def main(wavscp_path, utt2dur_path, noiseWAV_path, mix_snr=None, speech_level_st
             mix_level = get_pk_level(scp_cmd)
 
         # Mix both inputs at 1/n balance factor
-        augmented_command = 'sox - --sox-pipe {speechEffect} | sox --combine mix --sox-pipe {noisePath} - gain -n {mixLevel} |'.format(
-            speechEffect=gain_effect, noisePath=noiseWAV_path, mixLevel=mix_level)
+        augmented_command = 'sox - --sox-pipe {speechEffect} | sox --combine mix --sox-pipe "|sox {noisePath} --sox-pipe trim {start} {duration}" - gain -n {mixLevel} |'.format(
+            speechEffect=gain_effect, noisePath=noiseWAV_path, start=noise_timestamp, duration=duration,
+            mixLevel=mix_level)
 
         augmented_wavscp_line = '{} {}\n'.format(wavscp_line, augmented_command)
-        print(augmented_wavscp_line)
+        new_wavscp_f.write(augmented_wavscp_line)
         
+    new_wavscp_f.close()
     wavscp_f.close()
     utt2dur_f.close()
-    
 
 
 if __name__ == '__main__':
     args = parser.parse_args()
-    print(args)
     
     wavscp_path = os.path.join(args.dataPath, 'wav.scp')
     utt2dur_path = os.path.join(args.dataPath, 'utt2dur')
@@ -168,5 +182,5 @@ if __name__ == '__main__':
 
     main(wavscp_path, utt2dur_path, args.noiseWAV, mix_snr=args.mix_snr,
             speech_level_str=args.speech_level, noise_level_str=args.noise_level,
-            mix_level=args.mix_level, noiseROI_path=args.noiseROI)
+            mix_level=args.mix_level, noise_timestamp=args.noise_timestamp, noiseROI_path=args.noiseROI)
 
