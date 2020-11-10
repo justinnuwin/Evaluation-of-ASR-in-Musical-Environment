@@ -1,14 +1,8 @@
-"""
-echo "$0 $@"
-. utils/parse_options.sh || exit 1;
-. ./path.sh || exit 1;
-
-for x in test_eval92 test_eval93 
-"""
-
 # Note mp3 codec is not installed by default:
 # $ sudo apt-get install libsox-fmt-mp3
-
+"""
+SIGGEP dataset ROI begins at 15 seconds for everything
+"""
 
 import os
 import sys
@@ -54,7 +48,7 @@ parser.add_argument('--noise-level', type=str, metavar='db',
                 is mixed at. The noise level will be normalized to 0dB by \
                 default to accomadate the default 1:1 mix snr. This is also \
                 superceded by --mix-snr.')
-parser.add_argument('--mix_level', type=float, metavar='db',
+parser.add_argument('--mix-level', type=float, metavar='db',
         help='The level of the mix. Output level will match speech signal\
                 by default.')
 parser.add_argument('--noise-timestamp', type=float, metavar='time',
@@ -66,11 +60,13 @@ parser.add_argument('--noiseROI', type=file_path, metavar='filepath',
                 noise filename (unique) to a list of regions of interest (start\
                 /end times). This is superceded by --noise_timestamp. \
                 (ROI is region of interest)')
-
-
-"""
-SIGGEP dataset ROI begins at 15 seconds for everything
-"""
+parser.add_argument('--sph2pipe', type=file_path, metavar='path/to/sph2pipe',
+        help='Path to sph2pipe if it is not on the path. This is needed to \
+                get the mix level of the final mix if --mix-level is not \
+                specified.')
+parser.add_argument('--dry-run', action='store_true',
+        help='Perform a dry run. Write augmented wav.scp file to stdout rather\
+                than dataPath/augmented_wav.scp')
 
 
 def parse_level_str(s):
@@ -109,13 +105,17 @@ def match_noise_properties(noiseWAV_path, noise_level_str=None, target_nchannels
 
 def get_pk_level(scp_cmd):
     res = subprocess.run('sox "|{}" --null stats'.format(scp_cmd), shell=True, stderr=subprocess.PIPE)   # For some reason, sox outputs stats on stderr
+    if res.returncode != 0:
+        raise Exception('Error getting peak level from utterance since desired mix level was not specified.\n{}'.format(res.stderr.decode('utf-8')))
     utterance_stats = res.stderr.decode('utf-8').strip().split('\n')
     for stat in utterance_stats:
         if 'Pk lev dB' in stat:
             return float(stat.replace('Pk lev dB', '').strip())
+    raise KeyError('Did not get Pk level dB from sox stats on utterance\n{}'.format(res))
 
 
-def main(wavscp_path, utt2dur_path, noiseWAV_path, mix_snr=None, speech_level_str=None, noise_level_str=None, mix_level=None, noise_timestamp=None, noiseROI_path=None):
+def main(wavscp_path, utt2dur_path, noiseWAV_path, mix_snr=None, speech_level_str=None, noise_level_str=None,
+        mix_level=None, noise_timestamp=None, noiseROI_path=None, dry_run=False, sph2pipe=None):
     if mix_snr is not None:
         speech_level_str = None
         noise_level_str = None
@@ -145,7 +145,11 @@ def main(wavscp_path, utt2dur_path, noiseWAV_path, mix_snr=None, speech_level_st
     wavscp_f = open(wavscp_path, 'r')
     utt2dur_f = open(utt2dur_path, 'r')
 
-    new_wavscp_f = open('new_wav.scp', 'w')
+    if not dry_run:
+        new_wavscp_path = os.path.join(os.path.dirname(wavscp_path), 'augmented_wav.scp')
+        new_wavscp_f = open(new_wavscp_path, 'w')
+    else:
+        new_wavscp_f = sys.stdout
 
     for i, wavscp_line in enumerate(wavscp_f):
         utt2dur_line = next(utt2dur_f).strip()
@@ -153,17 +157,22 @@ def main(wavscp_path, utt2dur_path, noiseWAV_path, mix_snr=None, speech_level_st
 
         wavscp_line = wavscp_line.strip()
         scp_cmd = ' '.join(wavscp_line.split(' ')[1:-1])    # Remove utterance id and ending pipe symbol
-        scp_cmd = '/mnt/Projects/18-781/18-781_Semester_Project/kaldi/tools/sph2pipe_v2.5/' + scp_cmd
+        if sph2pipe is not None:
+            scp_cmd = os.path.join(os.path.dirname(sph2pipe), scp_cmd)
+
         if mix_level is None:
-            mix_level = get_pk_level(scp_cmd)
+            this_mix_level = get_pk_level(scp_cmd)
+        else:
+            this_mix_level = mix_level
 
         # Mix both inputs at 1/n balance factor
-        augmented_command = 'sox - --sox-pipe {speechEffect} | sox --combine mix --sox-pipe "|sox {noisePath} --sox-pipe trim {start} {duration}" - gain -n {mixLevel} |'.format(
+        augmented_command = 'sox -t wav - -p {speechEffect} | sox --combine mix -p "|sox {noisePath} -p trim {start} {duration}" -t wav - gain -n {mixLevel} |'.format(
             speechEffect=gain_effect, noisePath=noiseWAV_path, start=noise_timestamp, duration=duration,
-            mixLevel=mix_level)
+            mixLevel=this_mix_level)
 
         augmented_wavscp_line = '{} {}\n'.format(wavscp_line, augmented_command)
         new_wavscp_f.write(augmented_wavscp_line)
+
         
     new_wavscp_f.close()
     wavscp_f.close()
@@ -182,5 +191,6 @@ if __name__ == '__main__':
 
     main(wavscp_path, utt2dur_path, args.noiseWAV, mix_snr=args.mix_snr,
             speech_level_str=args.speech_level, noise_level_str=args.noise_level,
-            mix_level=args.mix_level, noise_timestamp=args.noise_timestamp, noiseROI_path=args.noiseROI)
+            mix_level=args.mix_level, noise_timestamp=args.noise_timestamp,
+            noiseROI_path=args.noiseROI, dry_run=args.dry_run, sph2pipe=args.sph2pipe)
 
