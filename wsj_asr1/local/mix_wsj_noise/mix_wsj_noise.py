@@ -115,7 +115,7 @@ def parse_level_str(s):
 
 
 # TODO: Make nchannels and srate dependent on the actual speech properties
-def match_noise_properties_to_speech(noiseFile_path, noise_mode, noise_level_str=None, target_nchannels=1, target_srate=16000,
+def match_noise_properties_to_speech(noiseFile_path, noise_level_str=None, target_nchannels=1, target_srate=16000,
         target_bitdepth=BITDEPTH, target_encoding=ENCODING):
 
     output_path = os.path.join(os.path.dirname(noiseFile_path), PREPROCESS_NOISE_DIR)
