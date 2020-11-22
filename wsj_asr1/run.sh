@@ -90,9 +90,9 @@ if [ $(echo $stage'<='0.5 | bc -l) == 1 ] && [ $(echo $stop_stage'>='0.5 | bc -l
             --mix-level $mix_level \
             --noise-timestamp $noise_timestamp
         pushd data/$rtask
-        mkdir -p .backup
-        mv wav.scp .backup/wav.scp.stg05-$(date +%y-%m-%d_%T)
-        mv augmented_wav.scp wav.scp
+        mkdir -vp .backup
+        mv -v wav.scp .backup/wav.scp.stg05-$(date +%y-%m-%d_%T)
+        mv -v augmented_wav.scp wav.scp
         popd
     done
 

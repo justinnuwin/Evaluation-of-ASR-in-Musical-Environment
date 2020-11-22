@@ -12,9 +12,9 @@ do
     pushd data/$dir
     if [ ! -f wav.scp.original ]
     then
-        cp wav.scp wav.scp.original
+        cp -v wav.scp wav.scp.original
     fi
-    cp wav.scp.original wav.scp
+    cp -v wav.scp.original wav.scp
     popd
 done
 

@@ -9,7 +9,6 @@ usage: mix_wsj_noise.py [-h] [--mix-snr snr] [--speech-level db]
 
 Note mp3 codec is normally not installed by default:
 $ sudo apt-get install libsox-fmt-mp3
-SIGGEP dataset ROI begins at 15 seconds for everything
 """
 import os
 import sys
@@ -21,6 +20,7 @@ from random import randint
 
 BITDEPTH=16
 ENCODING='signed-integer'
+PREPROCESS_NOISE_DIR='preprocessed_noise_tracks'
 
 
 def build_parser():
@@ -50,10 +50,9 @@ def build_parser():
                     distribution. When using a directory, to search for noise sources, the \
                     `--noise-ext` argument MUST be provided. A file will be generated mapping \
                     the utterance ID to the noise source. The search will descend 1 directory \
-                    deep and gather all files with the matching extension. \
-                    If `--noise-timestamp` is not given, \
-                    or there is no ROI mapping file, or the specified file is not in the \
-                    ROI map, then start mixing from beginning.')
+                    deep and gather all files with the matching extension. If `--noise-timestamp` \
+                    is not given, or there is no ROI mapping file, or the specified file is not \
+                    in the ROI map, then start mixing from beginning.')
     parser.add_argument('--noise-ext', type=str, metavar='ext',
             help='Used only when noiseFile is a directory. This is used to search for noise files \
                     of a specified extension in the noiseFile directory in case there are other \
@@ -116,12 +115,17 @@ def parse_level_str(s):
 
 
 # TODO: Make nchannels and srate dependent on the actual speech properties
-def match_noise_properties_to_speech(noiseFile_path, noise_level_str=None, target_nchannels=1, target_srate=16000,
+def match_noise_properties_to_speech(noiseFile_path, noise_mode, noise_level_str=None, target_nchannels=1, target_srate=16000,
         target_bitdepth=BITDEPTH, target_encoding=ENCODING):
+
+    output_path = os.path.join(os.path.dirname(noiseFile_path), PREPROCESS_NOISE_DIR)
+    if not os.path.isdir(output_path):
+        os.mkdir(output_path)
+
     if noise_level_str is not None:
         noise_level, relative = parse_level_str(noise_level_str)
         matched_filename = 'lv{}-{}.wav'.format(noise_level_str, os.path.splitext(os.path.basename(noiseFile_path))[0])
-        matched_path = os.path.join(os.path.dirname(noiseFile_path), matched_filename)
+        matched_path = os.path.join(output_path, matched_filename)
 
         if relative:
             gain_effect = 'gain {}'.format(noise_level)
@@ -129,7 +133,7 @@ def match_noise_properties_to_speech(noiseFile_path, noise_level_str=None, targe
             gain_effect = 'gain -n {}'.format(noise_level)     # Normalizes peak to noise_level dB FSD (Full Scale Deflection)
     else:
         matched_filename = '{}.wav'.format(os.path.splitext(os.path.basename(noiseFile_path))[0])
-        matched_path = os.path.join(os.path.dirname(noiseFile_path), matched_filename)
+        matched_path = os.path.join(output_path, matched_filename)
         gain_effect = 'gain -n'     # Normalize to 0db for 1:1 mixing.
 
     command = 'sox -V2 {infile} --type wav --channels={nchannels} --rate={srate} --bits {bits} --encoding {encoding} {outfile} {effect}'.format(
@@ -204,12 +208,16 @@ def search_audio(start_path, ext):
     file_paths = []
     for lv1 in sorted(os.listdir(start_path)):
         lv1_path = os.path.join(start_path, lv1)
-        if os.path.isfile(lv1_path) and lv1.endswith(ext):
+        if lv1 == PREPROCESS_NOISE_DIR:    # Don't search the output folder for audio
+            continue
+        elif os.path.isfile(lv1_path) and lv1.endswith(ext):
             file_paths.append(lv1_path)
         elif os.path.isdir(lv1_path):
             for filename in sorted(os.listdir(lv1_path)):
                 lv2_path = os.path.join(lv1_path, filename)
-                if os.path.isfile(lv2_path) and lv2.endswith(ext):
+                if filename == PREPROCESS_NOISE_DIR:
+                    continue
+                elif os.path.isfile(lv2_path) and filename.endswith(ext):
                     file_paths.append(lv2_path)
     if len(file_paths) == 0:
         raise FileNotFoundError('No files with the {} extension were found at {}'.format(ext, start_path))

@@ -1,8 +1,8 @@
-PROJECT_ROOT=$(dirname $0)      # Location of this script. Shouldn't need to change
-MIX_SNR=12                      # Relative SNR between utterance and noise
+PROJECT_ROOT=$(pwd)             # Location of this script. Shouldn't need to change
+MIX_SNR=15                      # Relative SNR between utterance and noise
 MIX_LEVEL=0                     # Output level of mix
 NOISE_START=15                  # Number of seconds into the noise source to start mixing
-DATASET_DIR=SIGSEP/Mixtures     # Path to the dataset
+DATASET_DIR=SIGSEP/11-21_Select-Sources_Trial     # Path to the dataset
 NOISE_FILE_EXT=wav              # Used to search for audio files
 
 
@@ -18,7 +18,7 @@ do
     echo -e "\n\n================================================================="
     echo "$(date)            $song_dir"
 
-    $PROJECT_ROOT/reset_wavscp.sh       # Reset the wav.scp back to the original from stage 0
+    $PROJECT_ROOT/reset_wavscp.sh   # Reset the wav.scp back to the original from stage 0
 
     # Augment data and extract features from the augmented data
     ./run.sh --stage 0.5 --stop_stage 1 --ngpu 0 \
@@ -31,15 +31,22 @@ do
     ./run.sh --stage 5 --ngpu 0
 
     pushd exp/train_si284_pytorch_train_no_preprocess
-    mkdir $song_dir/$OUTPUT_DIR
-    mv decode_* $song_dir/$OUTPUT_DIR   # Save the decoding results in exp/train_si284_*
+    mkdir -v $song_dir/$OUTPUT_DIR
+    mv -v decode_* $song_dir/$OUTPUT_DIR   # Save the decoding results in exp/train_si284_*
     popd
+
     pushd data
+
     pushd test_dev93
-    cp wav.scp $song_dir/$OUTPUT_DIR/test_dev93_wav.scp     # Save the augmented wav.scp
+    cp -v wav.scp $song_dir/$OUTPUT_DIR/test_dev93_wav.scp     # Save the augmented wav.scp
+    cp -v noise_utt_map $song_dir/$OUTPUT_DIR/test_dev93_noise_utt_map  
     popd
+
     pushd test_eval92
-    cp wav.scp $song_dir/$OUTPUT_DIR/test_eval92_wav.scp    # Save the augmented wav.scp
+    cp -v wav.scp $song_dir/$OUTPUT_DIR/test_eval92_wav.scp    # Save the augmented wav.scp
+    cp -v noise_utt_map $song_dir/$OUTPUT_DIR/test_eval92_noise_utt_map  
+    popd
+
     popd
 done
 popd
