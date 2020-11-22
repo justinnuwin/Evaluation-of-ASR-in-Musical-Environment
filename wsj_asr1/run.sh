@@ -52,6 +52,7 @@ noise_file=$MAIN_ROOT/../wsj_asr1/local/mix_wsj_noise/test/Kalimba.mp3
 mix_snr=3
 noise_timestamp=15.0
 mix_level=0
+noise_ext=wav
 
 . utils/parse_options.sh || exit 1;
 
@@ -79,10 +80,11 @@ if [ $(echo $stage'<='0.5 | bc -l) == 1 ] && [ $(echo $stop_stage'>='0.5 | bc -l
     echo "stage 0.5: Data augmentation"
 
     # Get utt2dur so we know how long to slice the noise source
-    # TODO
+    # TODO if stage 0 was not run before hand (it generates utt2dur)
     
     for rtask in ${recog_set}; do
         python3 local/mix_wsj_noise.py data/$rtask $noise_file \
+            --noise-ext $noise_ext \
             --sph2pipe $KALDI_ROOT/tools/sph2pipe_v2.5/sph2pipe \
             --mix-snr $mix_snr \
             --mix-level $mix_level \

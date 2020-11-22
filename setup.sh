@@ -138,4 +138,10 @@ then
 fi
 
 
-# ./espnet/utils/download_from_google_drive.sh https://drive.google.com/uc?id=1YApb8klDufKHZfvGy95kQb_rW5bfIK2p&export=download     # Download music mixture
+# Datasets re-uploaded for 18-781
+
+# Download SIGSEP Sources
+# ./espnet/utils/download_from_google_drive.sh https://drive.google.com/uc?id=1Ov91wIzkiWCX0wgO2FX0PDgAHB6AGlEB&export=download
+
+# Download SEGSEP Mixture
+# ./espnet/utils/download_from_google_drive.sh https://drive.google.com/uc?id=1YApb8klDufKHZfvGy95kQb_rW5bfIK2p&export=download
