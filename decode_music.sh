@@ -1,3 +1,31 @@
+# This script follows this directory structure:
+# DATASET_ROOT/
+# ├─ song_1/
+# │  ├─ some.wav
+# │  ├─ another.wav
+# ├─ song_2/
+# │  ├─ test.wav
+# │  ├─ cool.wav
+# ...
+#
+# If DATASET_DIR is set to DATASET_ROOT, then this script will run a trail (a complete mixing and decoding
+# of the speech dataset) for each directory under DATASET_ROOT, randomly mixing the audio files under
+# each directory with the speech following a uniform distribution.
+#
+# If DATASET_DIR is set to a directory in DATASET_ROOT (song_2 for example), this script will run a 
+# separate trial for each song in the directory (i.e. test.wav, cool.wav).
+#
+# If there are spaces in the foldernames, use remove_spaces_from_dataset_paths.sh which looks for
+# song folders under DATASET_ROOT matching the following schema
+#
+# DATASET_ROOT/
+# ├─ SongID - Artist Name - Song Title/
+# ├─ SongID - Artist Name - Song Title/
+# ├─ SongID - Artist Name - Song Title/
+# ...
+# 
+
+
 PROJECT_ROOT=$(pwd)             # Location of this script. Shouldn't need to change
 MIX_SNR=15                      # Relative SNR between utterance and noise
 MIX_LEVEL=0                     # Output level of mix
