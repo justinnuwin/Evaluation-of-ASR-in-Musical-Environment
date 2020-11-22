@@ -199,7 +199,7 @@ def prepare_sources(noiseFile_path, mix_snr, speech_level_str, noise_level_str):
 
 
 def main(wavscp_path, utt2dur_path, noiseFile_path, noise_ext=None, mix_snr=None, speech_level_str=None, noise_level_str=None,
-        mix_level=None, noise_timestamp=None, noiseROI_path=None, dry_run=False, sph2pipe=None):
+        mix_level=None, noise_timestamp=None, noiseROI_path=None, dry_run=False, sph2pipe=None, job_num=None):
 
     noiseWAV_path = []
     if noise_ext is not None:   # Directory mode
@@ -223,7 +223,10 @@ def main(wavscp_path, utt2dur_path, noiseFile_path, noise_ext=None, mix_snr=None
     wavscp_f = open(wavscp_path, 'r')
     utt2dur_f = open(utt2dur_path, 'r')
     if noise_mode == 'directory':
-        noise_utt_map_path = os.path.join(os.path.dirname(wavscp_path), 'noise_utt_map')
+        if job_num is None:
+            noise_utt_map_path = os.path.join(os.path.dirname(wavscp_path), 'noise_utt_map')
+        else:
+            noise_utt_map_path = os.path.join(os.path.dirname(wavscp_path), 'noise_utt_map.{:02d}'.format(job_num))
         noise_utt_map_f = open(noise_utt_map_path, 'w')
         noise_utt_map_f.write(str(noiseWAV_path) + '\n')
 
@@ -236,9 +239,15 @@ def main(wavscp_path, utt2dur_path, noiseFile_path, noise_ext=None, mix_snr=None
 
     for i, wavscp_line in enumerate(wavscp_f):
         utt2dur_line = next(utt2dur_f).strip()
-        utt_id, duration = utt2dur_line.split()
+        utt2dur_utt_id, duration = utt2dur_line.split()
 
         wavscp_line = wavscp_line.strip()
+        utt_id = wavscp_line.split(' ')[0]
+        if utt2dur_utt_id != utt_id:
+            raise Exception('It seems the utterance IDs betwen utt2dur and wav.scp do not match: {} {}\
+                    \nPossibly you are trying to run a batch job, but didn\'t split both the wav.scp and utt2dur files?'.format(
+                        utt2dur_utt_id, utt_id))
+
         scp_cmd = ' '.join(wavscp_line.split(' ')[1:-1])    # Remove utterance id and ending pipe symbol
         if sph2pipe is not None:
             scp_cmd = os.path.join(os.path.dirname(sph2pipe), scp_cmd)
@@ -278,9 +287,10 @@ if __name__ == '__main__':
     
     if args.job is not None:
         wavscp_path = os.path.join(args.dataPath, 'wav.scp.{:02d}'.format(args.job))
+        utt2dur_path = os.path.join(args.dataPath, 'utt2dur.{:02d}'.format(args.job))
     else:
         wavscp_path = os.path.join(args.dataPath, 'wav.scp')
-    utt2dur_path = os.path.join(args.dataPath, 'utt2dur')
+        utt2dur_path = os.path.join(args.dataPath, 'utt2dur')
     if not os.path.isfile(wavscp_path):
         raise FileNotFoundError('Could not find wav.scp in {}'.format(args.dataPath))
     if not os.path.isfile(utt2dur_path):
@@ -311,5 +321,5 @@ if __name__ == '__main__':
     main(wavscp_path, utt2dur_path, args.noiseFile, noise_ext=noise_ext, mix_snr=args.mix_snr,
             speech_level_str=args.speech_level, noise_level_str=args.noise_level,
             mix_level=args.mix_level, noise_timestamp=args.noise_timestamp,
-            noiseROI_path=args.noiseROI, dry_run=args.dry_run, sph2pipe=args.sph2pipe)
+            noiseROI_path=args.noiseROI, dry_run=args.dry_run, sph2pipe=args.sph2pipe, job_num=args.job)
 
