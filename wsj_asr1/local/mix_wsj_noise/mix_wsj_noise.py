@@ -49,7 +49,9 @@ def build_parser():
                     randomly selected noise source in this directory following a uniform \
                     distribution. When using a directory, to search for noise sources, the \
                     `--noise-ext` argument MUST be provided. A file will be generated mapping \
-                    the utterance ID to the noise source. If `--noise-timestamp` is not given, \
+                    the utterance ID to the noise source. The search will descend 1 directory \
+                    deep and gather all files with the matching extension. \
+                    If `--noise-timestamp` is not given, \
                     or there is no ROI mapping file, or the specified file is not in the \
                     ROI map, then start mixing from beginning.')
     parser.add_argument('--noise-ext', type=str, metavar='ext',
@@ -198,18 +200,32 @@ def prepare_sources(noiseFile_path, mix_snr, speech_level_str, noise_level_str):
     return noiseWAV_path, speech_gain_effect, noise_length
 
 
+def search_audio(start_path, ext):
+    file_paths = []
+    for lv1 in sorted(os.listdir(start_path)):
+        lv1_path = os.path.join(start_path, lv1)
+        if os.path.isfile(lv1_path) and lv1.endswith(ext):
+            file_paths.append(lv1_path)
+        elif os.path.isdir(lv1_path):
+            for filename in sorted(os.listdir(lv1_path)):
+                lv2_path = os.path.join(lv1_path, filename)
+                if os.path.isfile(lv2_path) and lv2.endswith(ext):
+                    file_paths.append(lv2_path)
+    if len(file_paths) == 0:
+        raise FileNotFoundError('No files with the {} extension were found at {}'.format(ext, start_path))
+    return file_paths
+
+
 def main(wavscp_path, utt2dur_path, noiseFile_path, noise_ext=None, mix_snr=None, speech_level_str=None, noise_level_str=None,
         mix_level=None, noise_timestamp=None, noiseROI_path=None, dry_run=False, sph2pipe=None, job_num=None):
 
     noiseWAV_path = []
     if noise_ext is not None:   # Directory mode
         noise_mode = 'directory'
-        for song in sorted(os.listdir(noiseFile_path)):
-            for filename in sorted(os.listdir(os.path.join(noiseFile_path, song))):
-                if filename.endswith(noise_ext):
-                    _noiseWAV_path, speech_gain_effect, noise_length = prepare_sources(os.path.join(noiseFile_path, song, filename),
-                            mix_snr, speech_level_str, noise_level_str)
-                    noiseWAV_path.append(_noiseWAV_path)
+        paths = search_audio(noiseFile_path, noise_ext)
+        for path in paths:
+            _noiseWAV_path, speech_gain_effect, noise_length = prepare_sources(path, mix_snr, speech_level_str, noise_level_str)
+            noiseWAV_path.append(_noiseWAV_path)
     else:
         noise_mode = 'file'
         _noiseWAV_path, speech_gain_effect, noise_length = prepare_sources(noiseFile_path, mix_snr, speech_level_str, noise_level_str)
@@ -299,20 +315,7 @@ if __name__ == '__main__':
     if os.path.isdir(args.noiseFile):
         if args.noise_ext is None:
             raise ValueError('When noiseFile is a directory, the `--noise-ext` argument must be provided')
-        else:
-            if args.noise_ext[0] == '.':
-                noise_ext = args.noise_ext[1:]
-            else:
-                noise_ext = args.noise_ext
-            for song in os.listdir(args.noiseFile):
-                has_audio = False
-                for filename in os.listdir(os.path.join(args.noiseFile, song)):
-                    if filename.endswith(noise_ext):
-                        has_audio = True
-                        break
-                if not has_audio:
-                    raise FileNotFoundError('No files with the {} extension were found in the noiseFile folder'.format(
-                        noise_ext))
+        noise_ext = args.noise_ext
     elif os.path.isfile(args.noiseFile):
         noise_ext = None
     else:

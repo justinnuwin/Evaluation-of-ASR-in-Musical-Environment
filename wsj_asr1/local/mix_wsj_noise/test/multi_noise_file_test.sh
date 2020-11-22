@@ -1,5 +1,5 @@
 NJOB=1      # Set to 1 for now, for some reason the split cmds below are not consistent btwn the two files
-CLEAN=false
+CLEAN=true
 
 python3 ../mix_wsj_noise.py --help
 
@@ -8,7 +8,7 @@ split --numeric-suffixes -n l/$NJOB data/utt2dur data/utt2dur.
 
 for i in $(seq 0 `expr $NJOB - 1`)
 do
-    python3 ../mix_wsj_noise.py data noise \
+    python3 ../mix_wsj_noise.py data noise/003 \
         --noise-ext mp3 \
         --sph2pipe ../../../../kaldi/tools/sph2pipe_v2.5/sph2pipe \
         --mix-level 0 \
