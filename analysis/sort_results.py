@@ -19,6 +19,16 @@ parser.add_argument('type', type=str,
         help='Either "char" or "word". Specifies the types of decoding results to sort')
 parser.add_argument('testSet', type=str,
         help='Either "dev" or "eval", selecting WSJ "test_dev93" or "test_eval92" respectively to sort')
+parser.add_argument('--output-dir', type=str, metavar='path',
+        help='Place to put the sorted results. If not specified, the results will be placed in the current \
+                direcutory.')
+
+
+def get_short_noise_source_name(path):
+    source_file = os.path.splitext(os.path.basename(path))[0]
+    source_dir = os.path.basename(os.path.dirname(path))
+    return '{}__{}'.format(source_dir, source_file)
+
 
 def parse_noise_utt_map(filepath, results={}, basepath=None):
     sorted_results = {}
@@ -31,10 +41,12 @@ def parse_noise_utt_map(filepath, results={}, basepath=None):
             uttId, noise_idx = line.split()
             noise_idx = int(noise_idx)
             noise_source = file_list[noise_idx]
+            short_noise_source = get_short_noise_source_name(noise_source)
             results[uttId]['noise_source'] = noise_source
-            if noise_source not in sorted_results:
-                sorted_results[noise_source] = {}
-            sorted_results[noise_source][uttId] = results[uttId]
+            results[uttId]['shortened_noise_source'] = short_noise_source
+            if short_noise_source not in sorted_results:
+                sorted_results[short_noise_source] = {}
+            sorted_results[short_noise_source][uttId] = results[uttId]
     return results, sorted_results
 
 
@@ -85,6 +97,9 @@ def parse_result_txt(filepath, results={}):
                     # eval = re.search('^Eval: (.+)', Eval_line).group(1).strip()
                     results[uttId]['evaluation'] = Eval_line[6:].strip()
 
+                    results[uttId]['original_output'] = '{}{}{}{}{}\n'.format(line, Scores_line,
+                            REF_line, HYP_line, Eval_line)
+
                     if speaker not in sorted_results:
                         sorted_results[speaker] = {}
                     sorted_results[speaker][uttId] = results[uttId]
@@ -93,6 +108,18 @@ def parse_result_txt(filepath, results={}):
                 break
 
     return results, sorted_results
+
+
+def write_results(results, output_dir):
+    for category in results.keys():
+        output_path = os.path.join(output_dir, category)
+        if not os.path.isdir(output_path):
+            os.mkdir(output_path)
+        output_file = os.path.join(output_path, 'results.txt')
+        with open(output_file, 'w') as f:
+            for uttId in results[category]:
+                f.write(results[category][uttId]['original_output'])
+                f.write('\n')
 
 
 if __name__ == '__main__':
@@ -120,4 +147,25 @@ if __name__ == '__main__':
             'wsj', 'asr1', 'data', test_set, 'spk2gender')
     results, sorted_results_by_gender  = parse_spk2gender(spk2gender_path, results)
 
-    # TODO: What to do with output
+    if args.output_dir is None:
+        output_dir = '.'
+    else:
+        output_dir = args.output_dir
+        if not os.path.exists(output_dir):
+            os.mkdir(output_dir)
+    
+    speaker_dir = os.path.join(output_dir, 'by_speaker')
+    if not os.path.isdir(speaker_dir):
+        os.mkdir(speaker_dir)
+    write_results(sorted_results_by_speaker, speaker_dir)
+
+    noise_dir = os.path.join(output_dir, 'by_noise')
+    if not os.path.isdir(noise_dir):
+        os.mkdir(noise_dir)
+    write_results(sorted_results_by_noise, noise_dir)
+
+    gender_dir = os.path.join(output_dir, 'by_gender')
+    if not os.path.isdir(gender_dir):
+        os.mkdir(gender_dir)
+    write_results(sorted_results_by_gender, gender_dir)
+
