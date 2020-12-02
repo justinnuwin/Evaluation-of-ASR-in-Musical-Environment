@@ -61,7 +61,7 @@ def parse_result_txt(filepath, results={}):
             try:
                 line = next(f)
                 if line[:3] == 'id:':
-                    match = re.search('^id: \((\d\w+)-([\d\w]+)\)', line)
+                    match = re.search('^id: \(([\d\w]+)-([\d\w]+)\)', line)
                     speaker = match.group(1)
                     uttId = match.group(2)
                     results[uttId] = {'speaker': speaker}
