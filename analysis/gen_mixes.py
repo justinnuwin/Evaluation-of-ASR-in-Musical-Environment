@@ -2,6 +2,7 @@ import os
 import sys
 import re
 import argparse
+import subprocess
 
 
 def dir_path(string):
@@ -29,7 +30,7 @@ parser.add_argument('--sph2pipe', type=str, metavar='path',
                 executable itself.')
 parser.add_argument('--uttId', type=str, metavar='id',
         help='Generate only the mix for the speficied utterance Id.')
-parser.add_argument('--output-dir', type=dir_path, metavar='path',
+parser.add_argument('--output-dir', type=str, metavar='path',
         help='Where to place the generated mixes. If not specified, the mixes will be placed in a direcotry \
                 called mixes in the same directory as the noise source that utterance was mixed with.')
 parser.add_argument('--outputFmt', type=str, metavar='format', default='wav',
@@ -38,10 +39,10 @@ parser.add_argument('--dry-run', action='store_true',
         help='Perform a dry run. Write the mix generaiton command to stdout.')
 
 
-def get_unique_noise_source_name(path):
-    source_file = os.path.basename(path).split('.')[0]      # Remove the extension too
+def get_unique_noise_source_name(path, utt_id):
+    source_file = os.path.splitext(os.path.basename(path))[0]
     source_dir = os.path.basename(os.path.dirname(path))
-    return '{}_{}'.format(source_dir, source_file)
+    return '{}__{}__{}'.format(utt_id, source_dir, source_file)
 
 
 def generate_mixes(wavSCP, sph2pipe_path=None, target_uttId=None, mix_fmt='wav', dry_run=False, output_dir=None,
@@ -66,7 +67,7 @@ def generate_mixes(wavSCP, sph2pipe_path=None, target_uttId=None, mix_fmt='wav',
 
             command_args = command_args.split(' ')
             original_mix_filename = command_args[-16]
-            output_name = '{}.{}'.format(output_name_fmt(original_mix_filename), mix_fmt)
+            output_name = '{}.{}'.format(output_name_fmt(original_mix_filename, uttId), mix_fmt)
             if output_dir is None:
                 output_dir = os.path.dirname(original_mix_filename)
                 output_dir = os.path.join(output_dir, 'mixes')
@@ -80,8 +81,9 @@ def generate_mixes(wavSCP, sph2pipe_path=None, target_uttId=None, mix_fmt='wav',
             if dry_run:
                 print(' '.join(command))
             else:
-                os.mkdir(output_dir)
-                subprocess.run(command)
+                if not os.path.exists(output_dir):
+                    os.mkdir(output_dir)
+                subprocess.call(' '.join(command), shell=True)
             
             
 
