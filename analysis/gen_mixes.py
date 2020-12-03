@@ -1,3 +1,8 @@
+"""
+Note mp3 codec is normally not installed by default:
+$ sudo apt-get install libsox-fmt-mp3
+"""
+
 import os
 import sys
 import re
@@ -21,7 +26,7 @@ def file_path(string):
 
 parser = argparse.ArgumentParser(description='Generate the noise and utterance mixtures specified in the \
         data augmentation step (step 0.5 of run.sh).')
-parser.add_argument('wavSCP', type=file_path, metavar='id',
+parser.add_argument('wavSCP', type=file_path, metavar='path',
         help='Path to the wav.scp.')
 parser.add_argument('--sph2pipe', type=str, metavar='path',
         help='Path to the sph2pipe program if it is not on the system PATH. It is built by kaldi and can \
