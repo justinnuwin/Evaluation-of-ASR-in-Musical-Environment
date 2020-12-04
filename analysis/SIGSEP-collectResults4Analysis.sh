@@ -29,7 +29,7 @@ do
         for ts in $test_set
         do
             python3 sort_results.py $DATASET_DIR/$instr/$RESULTS_DIR_BASENAME $type $ts \
-                --output-dir $OUTPUT_DIR/sorted_results-$type-${ts}_11-22_${instr}_snr15_start0
+                --output-dir $OUTPUT_DIR/sorted-$type-$ts-${instr}__$RESULTS_DIR_BASENAME
         done
     done
 
