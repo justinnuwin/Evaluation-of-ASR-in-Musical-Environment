@@ -8,7 +8,7 @@
 # │  ├─ cool.wav
 # ...
 #
-# If DATASET_DIR is set to DATASET_ROOT, then this script will run a trail (a complete mixing and decoding
+# If DATASET_DIR is set to DATASET_ROOT, then this script will run a trial (a complete mixing and decoding
 # of the speech dataset) for each directory under DATASET_ROOT, randomly mixing the audio files under
 # each directory with the speech following a uniform distribution.
 #
@@ -30,7 +30,7 @@ PROJECT_ROOT=$(pwd)             # Location of this script. Shouldn't need to cha
 MIX_SNR=15                      # Relative SNR between utterance and noise
 MIX_LEVEL=0                     # Output level of mix
 NOISE_START=15                  # Number of seconds into the noise source to start mixing
-DATASET_DIR=SIGSEP/11-21_Select-Sources_Trial     # Path to the dataset
+DATASET_DIR=SIGSEP/12-4_Other_12dBSNR_Start15
 NOISE_FILE_EXT=wav              # Used to search for audio files
 
 
@@ -45,6 +45,12 @@ for song_dir in $PROJECT_ROOT/$DATASET_DIR/*
 do
     echo -e "\n\n================================================================="
     echo "$(date)            $song_dir"
+
+
+    if [ "$(basename $song_dir)" == "info" ]    # Skip info file which may exist in DATASET_DIR
+    then
+        continue
+    fi
 
     $PROJECT_ROOT/reset_wavscp.sh   # Reset the wav.scp back to the original from stage 0
 
