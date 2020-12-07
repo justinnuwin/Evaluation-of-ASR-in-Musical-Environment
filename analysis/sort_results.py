@@ -5,6 +5,7 @@ import argparse
 import ast
 from scipy.stats import iqr     # statistics doesnt include quantiles until python 3.8
 from statistics import mean, median, variance
+from copy import deepcopy
 
 
 def dir_path(string):
@@ -117,7 +118,7 @@ def summarize_results(results):
                'substitution': [],
                'deletion': [],
                'insertion': []}
-    scores = {category: _scores.copy() for category in results.keys()}
+    scores = {category: deepcopy(_scores) for category in results.keys()}
     for category in results.keys():
         for utterance in results[category]:
             this_scores = results[category][utterance]['scores']
