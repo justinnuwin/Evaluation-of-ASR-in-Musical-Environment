@@ -1,3 +1,4 @@
+#!/bin/bash
 # Script to generate the sorted results and mixes for for analysis for the SIGSEP dataset
 # This dataset is formatted by $DATASET_DIR/$instruments/$RESULTS_DIR_BASENAME
 # The DATASET_DIR and RESULTS_DIR_BASENAME are fixed, but each trial is performed over
@@ -28,15 +29,18 @@ do
     do
         for ts in $test_set
         do
-            python3 sort_results.py $DATASET_DIR/$instr/$RESULTS_DIR_BASENAME $type $ts \
-                --output-dir $OUTPUT_DIR/sorted-$type-$ts-${instr}__$RESULTS_DIR_BASENAME
+            results_dir=$DATASET_DIR/$instr/$RESULTS_DIR_BASENAME   # Support wildcards
+            results_dir_basename=$(basename $results_dir)
+            echo $results_dir
+            python3 sort_results.py $results_dir $type $ts \
+                --output-dir $OUTPUT_DIR/sorted-$type-$ts-${instr}__$results_dir_basename
         done
     done
 
 
-    python3 gen_mixes.py --sph2pipe ../kaldi/tools/sph2pipe_v2.5/ --outputFmt mp3 \
-        --output-dir $OUTPUT_DIR/$instr-mixes $DATASET_DIR/$instr/$RESULTS_DIR_BASENAME/test_dev93_wav.scp
-    python3 gen_mixes.py --sph2pipe ../kaldi/tools/sph2pipe_v2.5/ --outputFmt mp3 \
-        --output-dir $OUTPUT_DIR/$instr-mixes $DATASET_DIR/$instr/$RESULTS_DIR_BASENAME/test_eval92_wav.scp
+#   python3 gen_mixes.py --sph2pipe ../kaldi/tools/sph2pipe_v2.5/ --outputFmt mp3 \
+#       --output-dir $OUTPUT_DIR/$instr-mixes $DATASET_DIR/$instr/$RESULTS_DIR_BASENAME/test_dev93_wav.scp
+#   python3 gen_mixes.py --sph2pipe ../kaldi/tools/sph2pipe_v2.5/ --outputFmt mp3 \
+#       --output-dir $OUTPUT_DIR/$instr-mixes $DATASET_DIR/$instr/$RESULTS_DIR_BASENAME/test_eval92_wav.scp
 
 done

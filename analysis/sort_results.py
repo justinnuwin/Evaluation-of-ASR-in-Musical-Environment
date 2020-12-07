@@ -3,6 +3,8 @@ import sys
 import re
 import argparse
 import ast
+from scipy.stats import iqr     # statistics doesnt include quantiles until python 3.8
+from statistics import mean, median, variance
 
 
 def dir_path(string):
@@ -21,7 +23,7 @@ parser.add_argument('testSet', type=str,
         help='Either "dev" or "eval", selecting WSJ "test_dev93" or "test_eval92" respectively to sort')
 parser.add_argument('--output-dir', type=str, metavar='path',
         help='Place to put the sorted results. If not specified, the results will be placed in the current \
-                direcutory.')
+                directory.')
 
 
 def get_short_noise_source_name(path):
@@ -110,13 +112,47 @@ def parse_result_txt(filepath, results={}):
     return results, sorted_results
 
 
+def summarize_results(results):
+    _scores = {'correct': [],
+               'substitution': [],
+               'deletion': [],
+               'insertion': []}
+    scores = {category: _scores.copy() for category in results.keys()}
+    for category in results.keys():
+        for utterance in results[category]:
+            this_scores = results[category][utterance]['scores']
+            for typ in this_scores.keys():
+                scores[category][typ].append(int(this_scores[typ]))
+    return scores
+
+
+def str_scores(scores):
+    res = ''
+    n = len(scores['correct'])  # All fields SHOULD be the same length
+    res += 'Number of utterances: {}\n'.format(n)
+    res += 'Sum | Correct: {}\t\tSubstitution: {}\t\tDeletion: {}\t\tInsertion: {}\n'.format(
+            sum(scores['correct']), sum(scores['substitution']), sum(scores['deletion']), sum(scores['insertion']))
+    res += 'Avg | Correct: {:.3f}\t\tSubstitution: {:.3f}\t\tDeletion: {:.3f}\t\tInsertion: {:.3f}\n'.format(
+            mean(scores['correct']), mean(scores['substitution']), mean(scores['deletion']), mean(scores['insertion']))
+    res += 'Med | Correct: {:.3f}\t\tSubstitution: {:.3f}\t\tDeletion: {:.3f}\t\tInsertion: {:.3f}\n'.format(
+            median(scores['correct']), median(scores['substitution']), median(scores['deletion']), median(scores['insertion']))
+    res += 'Var | Correct: {:.3f}\t\tSubstitution: {:.3f}\t\tDeletion: {:.3f}\t\tInsertion: {:.3f}\n'.format(
+            variance(scores['correct']), variance(scores['substitution']), variance(scores['deletion']), variance(scores['insertion']))
+    res += 'IQR | Correct: {:.3f}\t\tSubstitution: {:.3f}\t\tDeletion: {:.3f}\t\tInsertion: {:.3f}\n'.format(
+            iqr(scores['correct']), iqr(scores['substitution']), iqr(scores['deletion']), iqr(scores['insertion']))
+    return res
+
+
 def write_results(results, output_dir):
+    scores = summarize_results(results)
     for category in results.keys():
         output_path = os.path.join(output_dir, category)
         if not os.path.isdir(output_path):
             os.mkdir(output_path)
         output_file = os.path.join(output_path, 'results.txt')
         with open(output_file, 'w') as f:
+            f.write(str_scores(scores[category]))
+            f.write('\n\n')
             for uttId in results[category]:
                 f.write(results[category][uttId]['original_output'])
                 f.write('\n')
